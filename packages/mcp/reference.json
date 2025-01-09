@@ -1,0 +1,755 @@
+{
+  "protocol_info": {
+    "name": "Model Context Protocol (MCP)",
+    "revision_date": "2024-11-05",
+    "purpose": "Standardize LLM integration with external data sources and tools",
+    "specification_source": "Based on TypeScript schema in schema.ts",
+    "documentation": {
+      "main_site": "modelcontextprotocol.io",
+      "components": [
+        "Architecture documentation",
+        "Base Protocol specification",
+        "Server Features guide",
+        "Client Features guide"
+      ],
+      "implementation_resources": {
+        "schema": "TypeScript schema in schema.ts",
+        "guides": "Implementation guides on main site",
+        "examples": "Available at modelcontextprotocol.io"
+      }
+    },
+    "inspiration": "Similar to Language Server Protocol for AI context integration",
+    "applications": ["AI-powered IDEs", "Chat interfaces", "Custom AI workflows"],
+    "core_functions": [
+      "Share contextual information with language models",
+      "Expose tools and capabilities to AI systems",
+      "Build composable integrations and workflows"
+    ]
+  },
+  "core_components": {
+    "participants": {
+      "hosts": {
+        "description": "LLM applications initiating connections",
+        "responsibilities": [
+          "Manage user consent",
+          "Control data exposure",
+          "Initialize connections",
+          "Implement consent UIs",
+          "Protect user data",
+          "Manage server connections"
+        ],
+        "implementation_requirements": [
+          "Robust authentication",
+          "Secure connection handling",
+          "User permission management"
+        ]
+      },
+      "clients": {
+        "description": "Connectors within the host application",
+        "capabilities": [
+          "Handle sampling requests",
+          "Manage LLM interactions",
+          "Control sampling behavior",
+          "Implement security measures"
+        ],
+        "implementation_requirements": [
+          "Secure sampling implementation",
+          "User control interfaces",
+          "Permission validation"
+        ]
+      },
+      "servers": {
+        "description": "Services providing context and capabilities",
+        "offerings": ["Resources", "Prompts", "Tools"],
+        "responsibilities": [
+          "Respect user consent",
+          "Secure data handling",
+          "Safe tool execution",
+          "Resource management",
+          "Capability exposure"
+        ],
+        "implementation_requirements": [
+          "Secure resource access",
+          "Tool execution isolation",
+          "Data protection measures"
+        ]
+      }
+    },
+    "communication": {
+      "protocol": "JSON-RPC 2.0",
+      "connection_type": "Stateful",
+      "capabilities": "Server and client capability negotiation",
+      "message_types": ["Request", "Response", "Notification"],
+      "implementation_requirements": ["Secure message handling", "State management", "Error handling"]
+    }
+  },
+  "features": {
+    "server_capabilities": {
+      "resources": {
+        "description": "Context and data provision",
+        "purpose": "Provide context for users or AI models",
+        "security_requirements": [
+          "No transmission without user consent",
+          "Appropriate access controls",
+          "Data encryption in transit"
+        ],
+        "implementation_guidelines": ["Resource access control", "Data validation", "Secure storage"]
+      },
+      "prompts": {
+        "description": "Templated messages and workflows",
+        "purpose": "Define structured interactions for users",
+        "security_requirements": ["Clear user visibility", "Control over execution", "Template validation"],
+        "implementation_guidelines": ["Template sanitization", "Execution control", "User feedback"]
+      },
+      "tools": {
+        "description": "Executable functions for AI models",
+        "security_note": "Represents arbitrary code execution paths",
+        "requirements": [
+          "Explicit user consent before invocation",
+          "Clear function documentation",
+          "User understanding before authorization",
+          "Sandboxed execution"
+        ],
+        "implementation_guidelines": ["Execution isolation", "Permission checking", "Resource limits"]
+      }
+    },
+    "client_capabilities": {
+      "sampling": {
+        "description": "Server-initiated agentic behaviors and recursive LLM interactions",
+        "requirements": [
+          "User approval",
+          "Control over sampling process",
+          "Prompt visibility",
+          "Result visibility",
+          "Rate limiting"
+        ],
+        "implementation_guidelines": ["Secure sampling implementation", "User control interfaces", "Result validation"]
+      }
+    }
+  },
+  "utilities": {
+    "configuration": {
+      "purpose": "Configure server and client behavior",
+      "scope": ["Security settings", "Connection parameters"],
+      "implementation_requirements": ["Secure configuration storage", "Parameter validation"]
+    },
+    "progress_tracking": {
+      "purpose": "Monitor long-running operations",
+      "importance": "Essential for user visibility",
+      "implementation_requirements": ["Accurate progress reporting", "Resource monitoring"]
+    },
+    "cancellation": {
+      "purpose": "Allow interruption of ongoing operations",
+      "security_aspect": "User control over execution",
+      "implementation_requirements": ["Clean operation termination", "Resource cleanup"]
+    },
+    "error_reporting": {
+      "purpose": "Standardized error handling",
+      "requirements": ["Clear error messages", "Security event logging"],
+      "implementation_guidelines": ["Error categorization", "Secure logging practices"]
+    },
+    "logging": {
+      "purpose": "Activity and debug information",
+      "security_considerations": ["Privacy", "Sensitive data handling"],
+      "implementation_requirements": ["Secure log storage", "Data sanitization", "Access control"]
+    }
+  },
+  "security": {
+    "principles": {
+      "user_consent": {
+        "description": "Users must consent to and control data access and operations",
+        "requirement": "MUST be explicit and informed",
+        "ui_requirements": ["Clear consent interfaces", "Review mechanisms", "Authorization controls"],
+        "implementation_guidelines": ["Persistent consent storage", "Revocation mechanisms", "Audit logging"]
+      },
+      "data_privacy": {
+        "description": "Explicit user consent required for data exposure",
+        "scope": "All data exposed to servers",
+        "controls": ["Access control implementation", "Data protection measures", "Transmission controls"],
+        "implementation_guidelines": ["Data encryption", "Access logging", "Data minimization"]
+      },
+      "tool_safety": {
+        "description": "Cautious tool handling with user consent",
+        "context": "Tools represent arbitrary code execution",
+        "requirements": ["Clear documentation", "Function understanding", "Explicit authorization"],
+        "implementation_guidelines": ["Sandboxing", "Resource limits", "Execution monitoring"]
+      },
+      "llm_sampling": {
+        "description": "User approval and control of sampling requests",
+        "controls": ["Explicit approval", "Process control", "Prompt visibility", "Result control"],
+        "implementation_guidelines": ["Rate limiting", "Content filtering", "Result validation"]
+      }
+    },
+    "implementation_guidelines": {
+      "consent_flows": {
+        "description": "Build robust consent and authorization flows",
+        "importance": "Critical for security",
+        "requirements": ["Clear UI", "Explicit actions", "Revocable consent"],
+        "implementation_steps": ["User interface design", "Consent storage", "Revocation handling"]
+      },
+      "documentation": {
+        "description": "Clear security implications documentation",
+        "requirement": "MUST be comprehensive",
+        "scope": ["Data handling", "Tool execution", "Security implications"],
+        "implementation_requirements": ["Clear documentation", "Regular updates", "Version control"]
+      },
+      "access_controls": {
+        "description": "Implement appropriate access controls",
+        "scope": "All data and operations",
+        "measures": ["Authentication", "Authorization", "Data protection"],
+        "implementation_requirements": ["Role-based access", "Permission checking", "Audit logging"]
+      },
+      "best_practices": {
+        "description": "Follow security best practices",
+        "context": "Throughout implementation",
+        "areas": ["Code security", "Data handling", "User interaction"],
+        "implementation_guidelines": ["Code review", "Security testing", "Regular audits"]
+      },
+      "privacy": {
+        "description": "Consider privacy in feature design",
+        "phase": "Design and implementation",
+        "considerations": ["Data minimization", "User control", "Transparency"],
+        "implementation_requirements": ["Privacy by design", "Data lifecycle management", "User controls"]
+      }
+    }
+  },
+  "related_topics": {
+    "base_protocol": [
+      "json_rpc",
+      "stateful_connections",
+      "capability_negotiation",
+      "message_types",
+      "security_protocols"
+    ],
+    "server_features": ["resources", "prompts", "tools", "context_provision", "data_protection", "execution_control"],
+    "client_features": ["sampling", "llm_interaction", "user_approval", "consent_management", "security_enforcement"],
+    "security": [
+      "user_consent",
+      "data_privacy",
+      "tool_safety",
+      "sampling_controls",
+      "authorization",
+      "access_control",
+      "audit_logging"
+    ],
+    "utilities": ["configuration", "progress", "cancellation", "errors", "logging", "security_events", "monitoring"],
+    "architecture": ["hosts", "clients", "servers", "communication", "security_layer", "integration_patterns"]
+  },
+  "terminology": {
+    "rfc_terms": {
+      "description": "Key terms follow BCP 14 [RFC2119] [RFC8174] interpretation",
+      "terms": [
+        "MUST",
+        "MUST NOT",
+        "REQUIRED",
+        "SHALL",
+        "SHALL NOT",
+        "SHOULD",
+        "SHOULD NOT",
+        "RECOMMENDED",
+        "NOT RECOMMENDED",
+        "MAY",
+        "OPTIONAL"
+      ],
+      "usage": "These terms are used when appearing in all capitals to indicate requirement levels",
+      "application": "Used throughout specification to indicate requirement levels"
+    }
+  },
+  "learning_resources": {
+    "documentation_structure": {
+      "architecture": {
+        "description": "System architecture and component interaction",
+        "topics": ["Component relationships", "Communication patterns", "Integration approaches"]
+      },
+      "base_protocol": {
+        "description": "Core protocol specification",
+        "topics": ["Message formats", "Connection handling", "Capability negotiation"]
+      },
+      "server_features": {
+        "description": "Available server capabilities",
+        "topics": ["Resource management", "Prompt handling", "Tool execution"]
+      },
+      "client_features": {
+        "description": "Available client capabilities",
+        "topics": ["Sampling management", "LLM interaction", "User control interfaces"]
+      }
+    },
+    "implementation_guidance": {
+      "getting_started": {
+        "steps": [
+          "Review architecture documentation",
+          "Understand security requirements",
+          "Implement base protocol",
+          "Add required features"
+        ]
+      },
+      "best_practices": {
+        "development": [
+          "Follow security guidelines",
+          "Implement robust error handling",
+          "Maintain comprehensive logging",
+          "Ensure user control"
+        ],
+        "testing": [
+          "Security testing",
+          "Performance testing",
+          "User interaction testing",
+          "Error handling verification"
+        ],
+        "deployment": ["Security configuration", "Monitoring setup", "Logging configuration", "User documentation"]
+      }
+    }
+  },
+  "development_workflow": {
+    "phases": {
+      "planning": {
+        "activities": ["Review documentation", "Understand security requirements", "Plan implementation approach"]
+      },
+      "implementation": {
+        "activities": [
+          "Set up development environment",
+          "Implement core features",
+          "Add security measures",
+          "Develop user interfaces"
+        ]
+      },
+      "testing": {
+        "activities": ["Security testing", "Feature verification", "Performance testing", "User acceptance testing"]
+      },
+      "deployment": {
+        "activities": ["Security configuration", "Monitoring setup", "Documentation", "User training"]
+      },
+      "maintenance": {
+        "activities": ["Security updates", "Feature enhancements", "Performance optimization", "User support"]
+      }
+    },
+    "continuous_improvement": {
+      "areas": ["Security measures", "Performance optimization", "User experience", "Documentation"],
+      "monitoring": ["Security events", "Performance metrics", "User feedback", "System health"]
+    }
+  },
+  "protocol_construction": {
+    "message_format": {
+      "base_protocol": "JSON-RPC 2.0",
+      "message_types": {
+        "request": {
+          "required_fields": ["jsonrpc", "method", "id"],
+          "optional_fields": ["params"],
+          "usage": "Client-to-server method invocation",
+          "validation": {
+            "jsonrpc": "Must be exactly '2.0'",
+            "method": "String identifying the method to call",
+            "id": "Unique identifier for request-response matching",
+            "params": "Object containing method parameters"
+          }
+        },
+        "response": {
+          "required_fields": ["jsonrpc", "id"],
+          "result_fields": ["result", "error"],
+          "usage": "Server response to client requests",
+          "validation": {
+            "jsonrpc": "Must be exactly '2.0'",
+            "id": "Must match the request id",
+            "result": "Present on success, absent on error",
+            "error": "Present on error, absent on success"
+          }
+        },
+        "notification": {
+          "required_fields": ["jsonrpc", "method"],
+          "optional_fields": ["params"],
+          "usage": "One-way messages without response",
+          "validation": {
+            "jsonrpc": "Must be exactly '2.0'",
+            "method": "String identifying the notification type",
+            "params": "Optional notification parameters"
+          }
+        }
+      },
+      "error_format": {
+        "required_fields": {
+          "code": "Integer error code",
+          "message": "String error description"
+        },
+        "optional_fields": {
+          "data": "Additional error information"
+        },
+        "standard_codes": {
+          "-32700": "Parse error",
+          "-32600": "Invalid request",
+          "-32601": "Method not found",
+          "-32602": "Invalid params",
+          "-32603": "Internal error"
+        }
+      }
+    },
+    "connection_lifecycle": {
+      "initialization": {
+        "steps": ["Establish connection", "Capability negotiation", "Feature discovery", "Security setup"],
+        "requirements": ["Secure channel establishment", "Version compatibility check", "Authentication if required"],
+        "sequence": {
+          "1_connection": {
+            "action": "Establish secure connection",
+            "requirements": ["TLS/SSL", "Protocol version header"]
+          },
+          "2_handshake": {
+            "action": "Protocol handshake",
+            "message": {
+              "type": "request",
+              "method": "initialize",
+              "params": {
+                "capabilities": "Client capabilities object",
+                "version": "Protocol version"
+              }
+            }
+          },
+          "3_server_response": {
+            "action": "Server capabilities",
+            "message": {
+              "type": "response",
+              "result": {
+                "capabilities": "Server capabilities object",
+                "version": "Supported version"
+              }
+            }
+          },
+          "4_initialization": {
+            "action": "Complete initialization",
+            "message": {
+              "type": "notification",
+              "method": "initialized"
+            }
+          }
+        }
+      },
+      "operation": {
+        "interaction_patterns": [
+          "Request-response for operations",
+          "Notifications for events",
+          "Streaming for long-running operations"
+        ],
+        "state_management": ["Connection state tracking", "Session management", "Resource lifecycle"],
+        "standard_methods": {
+          "resource_methods": ["getResource", "listResources", "watchResource"],
+          "tool_methods": ["listTools", "executeTool", "cancelTool"],
+          "sampling_methods": ["requestSample", "provideSample", "cancelSample"]
+        }
+      },
+      "termination": {
+        "steps": ["Cleanup resources", "Close connections", "State cleanup"],
+        "requirements": ["Graceful shutdown", "Resource release", "State persistence if needed"],
+        "sequence": {
+          "1_shutdown": {
+            "action": "Request shutdown",
+            "message": {
+              "type": "request",
+              "method": "shutdown"
+            }
+          },
+          "2_cleanup": {
+            "action": "Perform cleanup",
+            "tasks": ["Release resources", "Save state if needed", "Close connections"]
+          },
+          "3_exit": {
+            "action": "Final notification",
+            "message": {
+              "type": "notification",
+              "method": "exit"
+            }
+          }
+        }
+      }
+    }
+  },
+  "interaction_patterns": {
+    "standard_operations": {
+      "resource_access": {
+        "flow": ["Request resource access", "User consent verification", "Access grant/deny", "Resource delivery"],
+        "security_checks": ["Permission validation", "Resource availability", "Access logging"]
+      },
+      "tool_execution": {
+        "flow": ["Tool discovery", "Execution request", "User authorization", "Execution", "Result delivery"],
+        "security_checks": ["Tool validation", "Parameter sanitization", "Resource limits"]
+      },
+      "sampling_requests": {
+        "flow": ["Sample request", "User approval", "Prompt validation", "Execution", "Result filtering"],
+        "controls": ["Rate limiting", "Content filtering", "Result validation"]
+      }
+    },
+    "error_handling": {
+      "patterns": {
+        "validation_errors": {
+          "handling": "Immediate client notification",
+          "recovery": "Client-side correction"
+        },
+        "runtime_errors": {
+          "handling": "Graceful degradation",
+          "recovery": "Automatic retry or user notification"
+        },
+        "security_errors": {
+          "handling": "Immediate termination",
+          "recovery": "Security review and reauthorization"
+        }
+      }
+    },
+    "extension_mechanisms": {
+      "capability_negotiation": {
+        "process": ["Feature advertisement", "Capability matching", "Extension activation"],
+        "requirements": ["Version compatibility", "Security validation", "Resource availability"]
+      },
+      "custom_features": {
+        "implementation": [
+          "Feature specification",
+          "Security review",
+          "Capability advertisement",
+          "Integration testing"
+        ],
+        "guidelines": ["Follow base protocol", "Maintain security model", "Document extensions"]
+      }
+    }
+  },
+  "topic_relationships": {
+    "feature_security_mapping": {
+      "resources": {
+        "security_principles": ["user_consent", "data_privacy"],
+        "implementation_guidelines": ["access_controls", "privacy"],
+        "utilities": ["configuration", "logging"]
+      },
+      "prompts": {
+        "security_principles": ["user_consent", "llm_sampling"],
+        "implementation_guidelines": ["consent_flows", "best_practices"],
+        "utilities": ["progress_tracking", "cancellation"]
+      },
+      "tools": {
+        "security_principles": ["tool_safety", "user_consent"],
+        "implementation_guidelines": ["access_controls", "best_practices"],
+        "utilities": ["error_reporting", "logging"]
+      },
+      "sampling": {
+        "security_principles": ["llm_sampling", "user_consent"],
+        "implementation_guidelines": ["consent_flows", "privacy"],
+        "utilities": ["configuration", "progress_tracking"]
+      }
+    },
+    "protocol_feature_mapping": {
+      "message_types": {
+        "request": {
+          "resource_methods": ["getResource", "listResources", "watchResource"],
+          "tool_methods": ["listTools", "executeTool", "cancelTool"],
+          "sampling_methods": ["requestSample", "provideSample", "cancelSample"]
+        },
+        "notification": {
+          "resource_events": ["resourceChanged", "resourceDeleted"],
+          "tool_events": ["toolStarted", "toolCompleted", "toolFailed"],
+          "sampling_events": ["sampleRequested", "sampleProvided"]
+        }
+      }
+    },
+    "utility_operation_mapping": {
+      "configuration": {
+        "affects": ["resource_access", "tool_execution", "sampling_requests"],
+        "security_impact": ["access_controls", "privacy"]
+      },
+      "progress_tracking": {
+        "affects": ["tool_execution", "sampling_requests"],
+        "security_impact": ["user_consent", "tool_safety"]
+      },
+      "cancellation": {
+        "affects": ["tool_execution", "sampling_requests"],
+        "security_impact": ["tool_safety"]
+      },
+      "error_reporting": {
+        "affects": ["resource_access", "tool_execution", "sampling_requests"],
+        "security_impact": ["privacy", "tool_safety"]
+      },
+      "logging": {
+        "affects": ["all_operations"],
+        "security_impact": ["privacy", "audit_logging"]
+      }
+    },
+    "implementation_learning_mapping": {
+      "architecture": {
+        "related_docs": ["base_protocol", "server_features", "client_features"],
+        "implementation_phases": ["planning", "implementation"],
+        "security_aspects": ["access_controls", "privacy"]
+      },
+      "base_protocol": {
+        "related_docs": ["architecture"],
+        "implementation_phases": ["implementation"],
+        "security_aspects": ["best_practices", "privacy"]
+      },
+      "server_features": {
+        "related_docs": ["architecture", "base_protocol"],
+        "implementation_phases": ["implementation", "testing"],
+        "security_aspects": ["tool_safety", "data_privacy"]
+      },
+      "client_features": {
+        "related_docs": ["architecture", "base_protocol"],
+        "implementation_phases": ["implementation", "testing"],
+        "security_aspects": ["user_consent", "llm_sampling"]
+      }
+    },
+    "workflow_security_mapping": {
+      "planning": {
+        "security_focus": ["privacy", "access_controls"],
+        "documentation_needs": ["architecture", "security_principles"]
+      },
+      "implementation": {
+        "security_focus": ["tool_safety", "user_consent"],
+        "documentation_needs": ["server_features", "client_features"]
+      },
+      "testing": {
+        "security_focus": ["all_principles"],
+        "documentation_needs": ["best_practices", "implementation_guidelines"]
+      },
+      "deployment": {
+        "security_focus": ["access_controls", "privacy"],
+        "documentation_needs": ["configuration", "monitoring"]
+      },
+      "maintenance": {
+        "security_focus": ["all_principles"],
+        "documentation_needs": ["best_practices", "security_updates"]
+      }
+    }
+  },
+  "standard_patterns": {
+    "resource_handling": {
+      "methods": {
+        "getResource": {
+          "security_checks": ["user_consent", "access_controls"],
+          "related_utilities": ["configuration", "error_reporting"],
+          "error_patterns": ["validation_errors", "security_errors"]
+        },
+        "listResources": {
+          "security_checks": ["user_consent", "access_controls"],
+          "related_utilities": ["configuration", "error_reporting"],
+          "error_patterns": ["validation_errors", "security_errors"]
+        },
+        "watchResource": {
+          "security_checks": ["user_consent", "access_controls"],
+          "related_utilities": ["configuration", "progress_tracking"],
+          "error_patterns": ["runtime_errors", "security_errors"]
+        }
+      }
+    },
+    "tool_handling": {
+      "methods": {
+        "listTools": {
+          "security_checks": ["tool_safety"],
+          "related_utilities": ["configuration", "error_reporting"],
+          "error_patterns": ["validation_errors"]
+        },
+        "executeTool": {
+          "security_checks": ["tool_safety", "user_consent"],
+          "related_utilities": ["progress_tracking", "cancellation"],
+          "error_patterns": ["runtime_errors", "security_errors"]
+        },
+        "cancelTool": {
+          "security_checks": ["tool_safety", "user_consent"],
+          "related_utilities": ["cancellation"],
+          "error_patterns": ["runtime_errors"]
+        }
+      }
+    },
+    "sampling_handling": {
+      "methods": {
+        "requestSample": {
+          "security_checks": ["llm_sampling", "user_consent"],
+          "related_utilities": ["configuration", "progress_tracking"],
+          "error_patterns": ["validation_errors", "security_errors"]
+        },
+        "provideSample": {
+          "security_checks": ["llm_sampling", "privacy"],
+          "related_utilities": ["error_reporting"],
+          "error_patterns": ["validation_errors", "security_errors"]
+        },
+        "cancelSample": {
+          "security_checks": ["llm_sampling"],
+          "related_utilities": ["cancellation"],
+          "error_patterns": ["runtime_errors"]
+        }
+      }
+    }
+  },
+  "protocol_versioning": {
+    "version_management": {
+      "format": {
+        "major": "Breaking changes",
+        "minor": "Backwards-compatible additions",
+        "patch": "Bug fixes and clarifications"
+      },
+      "compatibility": {
+        "rules": [
+          "Servers MUST support all minor versions below their major version",
+          "Clients SHOULD support latest minor version of their major version",
+          "Protocol negotiation MUST occur during initialization"
+        ],
+        "version_negotiation": {
+          "client_behavior": {
+            "steps": [
+              "Send highest supported version",
+              "Accept server-supported version",
+              "Adapt to server capabilities"
+            ]
+          },
+          "server_behavior": {
+            "steps": ["Compare client version", "Select highest common version", "Respond with supported features"]
+          }
+        }
+      }
+    },
+    "feature_compatibility": {
+      "core_features": {
+        "status": "REQUIRED",
+        "version_requirements": "Must be supported across all versions"
+      },
+      "optional_features": {
+        "status": "OPTIONAL",
+        "version_requirements": "May be added in minor versions"
+      },
+      "experimental_features": {
+        "status": "MAY",
+        "version_requirements": "Must be explicitly negotiated"
+      }
+    },
+    "upgrade_paths": {
+      "major_version": {
+        "process": ["Protocol negotiation fails", "Client must upgrade", "Server may provide upgrade guidance"],
+        "requirements": ["Breaking changes documented", "Migration guide provided", "Security implications detailed"]
+      },
+      "minor_version": {
+        "process": [
+          "Protocol negotiation succeeds",
+          "New features may be unavailable",
+          "Core functionality maintained"
+        ],
+        "requirements": [
+          "Backwards compatibility maintained",
+          "New features documented",
+          "Security considerations updated"
+        ]
+      }
+    }
+  },
+  "component_relationships": {
+    "version_dependencies": {
+      "protocol_features": {
+        "base_protocol": {
+          "version_sensitivity": "High",
+          "upgrade_impact": "Breaking changes affect all components"
+        },
+        "server_features": {
+          "version_sensitivity": "Medium",
+          "upgrade_impact": "May require client updates"
+        },
+        "client_features": {
+          "version_sensitivity": "Medium",
+          "upgrade_impact": "May require server compatibility"
+        },
+        "security_features": {
+          "version_sensitivity": "High",
+          "upgrade_impact": "Must maintain or enhance security"
+        }
+      }
+    }
+  }
+}
