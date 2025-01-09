@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "brave": {
-      "id": "brave",
+    "brave-search": {
+      "id": "brave-search",
       "name": "Brave Search MCP",
       "description": "Local Brave Search MCP server",
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-brave-search"],
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
       "env": {
         "BRAVE_API_KEY": "BSAOM15URP3NRp1jBKlT-F0eYOdC1Qp"
       }

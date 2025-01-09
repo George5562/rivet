@@ -6,158 +6,94 @@
       "id": "setup-1",
       "title": "Setup Node Executor Environment",
       "description": "Set up core package watcher and app-executor in dev mode",
-      "status": "todo",
+      "status": "completed",
       "priority": "high",
       "dependencies": []
     },
     {
       "id": "setup-2",
-      "title": "Add MCP Dependencies",
-      "description": "Add @modelcontextprotocol/core and @modelcontextprotocol/server-brave-search to package.json",
-      "status": "todo",
+      "title": "Create MCP Server Configuration",
+      "description": "Create and configure MCP server configuration file for Brave Search integration",
+      "status": "completed",
       "priority": "high",
       "dependencies": []
     },
     {
       "id": "core-1",
-      "title": "Create MCPProcessManager Class",
-      "description": "Implement core process management functionality including server startup, shutdown, and health checks",
-      "status": "todo",
+      "title": "Implement Connection Lifecycle",
+      "description": "Implement connection initialization, capability negotiation, and termination following MCP protocol",
+      "status": "completed",
       "priority": "high",
-      "dependencies": ["setup-1"]
+      "dependencies": ["setup-1", "setup-2"]
     },
     {
       "id": "core-2",
-      "title": "Implement Basic Node Structure",
-      "description": "Create basic MCPNode class with configuration handling and process manager integration",
-      "status": "todo",
+      "title": "Implement Standard Operations",
+      "description": "Add support for resource, tool, and sampling operations as defined in MCP specification",
+      "status": "completed",
       "priority": "high",
       "dependencies": ["core-1"]
     },
     {
       "id": "core-3",
-      "title": "Implement Node Registration",
-      "description": "Add node to registry in packages/core/src/nodes/index.ts and register component",
+      "title": "Implement Error Handling",
+      "description": "Add protocol-compliant error handling for validation, runtime, and security errors",
       "status": "todo",
       "priority": "high",
       "dependencies": ["core-2"]
     },
     {
       "id": "security-1",
-      "title": "Implement User Consent Handling",
-      "description": "Add user consent UI and handling for server operations",
+      "title": "Implement Security Layer",
+      "description": "Add user consent, data privacy, tool safety, and sampling security measures",
       "status": "todo",
       "priority": "high",
       "dependencies": ["core-2"]
     },
     {
-      "id": "security-2",
-      "title": "Implement Security Controls",
-      "description": "Add data privacy controls and tool safety measures",
+      "id": "node-1",
+      "title": "Create Basic Node Structure",
+      "description": "Create MCPNode class with configuration handling and process manager integration",
       "status": "todo",
       "priority": "high",
-      "dependencies": ["security-1"]
+      "dependencies": ["core-3", "security-1"]
     },
     {
-      "id": "brave-1",
-      "title": "Add Brave Search Configuration",
-      "description": "Implement Brave Search specific configuration handling and validation",
-      "status": "todo",
-      "priority": "high",
-      "dependencies": ["setup-2", "core-2"]
-    },
-    {
-      "id": "brave-2",
-      "title": "Implement Capability Negotiation",
-      "description": "Add capability discovery and negotiation for Brave Search server",
-      "status": "todo",
-      "priority": "high",
-      "dependencies": ["brave-1"]
-    },
-    {
-      "id": "brave-3",
-      "title": "Implement Search Operations",
-      "description": "Add core search functionality and response handling",
-      "status": "todo",
-      "priority": "high",
-      "dependencies": ["brave-2"]
-    },
-    {
-      "id": "ui-1",
-      "title": "Create Basic Node UI",
-      "description": "Implement basic node UI component showing connection status and configuration",
+      "id": "node-2",
+      "title": "Implement Node UI",
+      "description": "Create node UI component showing connection status, capabilities, and security controls",
       "status": "todo",
       "priority": "medium",
-      "dependencies": ["core-2"]
+      "dependencies": ["node-1"]
     },
     {
-      "id": "ui-2",
-      "title": "Add Configuration UI",
-      "description": "Add UI elements for Brave Search configuration including API key management",
+      "id": "node-3",
+      "title": "Add Node Documentation",
+      "description": "Create comprehensive documentation including setup, security, and protocol details",
       "status": "todo",
       "priority": "medium",
-      "dependencies": ["ui-1", "brave-1"]
-    },
-    {
-      "id": "ui-3",
-      "title": "Implement Error Handling UI",
-      "description": "Add error display and recovery options in the UI",
-      "status": "todo",
-      "priority": "medium",
-      "dependencies": ["ui-2"]
+      "dependencies": ["node-2"]
     },
     {
       "id": "test-1",
-      "title": "Setup Test Environment",
-      "description": "Create test environment with mock MCP server for unit testing",
+      "title": "Implement Unit Tests",
+      "description": "Add tests for protocol handling, lifecycle management, and security measures",
       "status": "todo",
-      "priority": "medium",
-      "dependencies": ["core-1"]
+      "priority": "high",
+      "dependencies": ["node-1"]
     },
     {
       "id": "test-2",
-      "title": "Implement Core Tests",
-      "description": "Add unit tests for process manager and core node functionality",
-      "status": "todo",
-      "priority": "medium",
-      "dependencies": ["test-1", "core-2"]
-    },
-    {
-      "id": "test-3",
       "title": "Add Integration Tests",
-      "description": "Implement end-to-end tests with live Brave Search server",
+      "description": "Create end-to-end tests for server communication and feature verification",
       "status": "todo",
       "priority": "medium",
-      "dependencies": ["test-2", "brave-3"]
-    },
-    {
-      "id": "docs-1",
-      "title": "Create Node Documentation",
-      "description": "Create mcp.md with usage instructions and configuration options",
-      "status": "todo",
-      "priority": "low",
-      "dependencies": ["core-2"]
-    },
-    {
-      "id": "docs-2",
-      "title": "Add Security Documentation",
-      "description": "Document security considerations and best practices",
-      "status": "todo",
-      "priority": "low",
-      "dependencies": ["docs-1", "security-2"]
-    },
-    {
-      "id": "docs-3",
-      "title": "Add Example Graphs",
-      "description": "Create example graphs showing MCP node usage with Brave Search",
-      "status": "todo",
-      "priority": "low",
-      "dependencies": ["docs-1", "brave-3"]
+      "dependencies": ["test-1"]
     }
   ],
   "metadata": {
     "currentPhase": "setup",
-    "nextMilestone": "Basic Brave Search Integration",
+    "nextMilestone": "Basic Protocol Implementation",
     "estimatedCompletion": "TBD",
     "phases": [
       {
@@ -170,24 +106,16 @@
       },
       {
         "name": "security",
-        "tasks": ["security-1", "security-2"]
+        "tasks": ["security-1"]
       },
       {
-        "name": "brave-integration",
-        "tasks": ["brave-1", "brave-2", "brave-3"]
-      },
-      {
-        "name": "ui",
-        "tasks": ["ui-1", "ui-2", "ui-3"]
+        "name": "node",
+        "tasks": ["node-1", "node-2", "node-3"]
       },
       {
         "name": "testing",
-        "tasks": ["test-1", "test-2", "test-3"]
-      },
-      {
-        "name": "documentation",
-        "tasks": ["docs-1", "docs-2", "docs-3"]
+        "tasks": ["test-1", "test-2"]
       }
     ]
   }
-} 
+}
