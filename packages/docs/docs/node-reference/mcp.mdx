@@ -1,0 +1,90 @@
+---
+title: MCP Node
+sidebar_label: MCP
+---
+
+# MCP Node
+
+The MCP (Model Context Protocol) Node enables interaction with MCP-compliant servers, providing access to external AI capabilities, tools, and resources through a standardized protocol.
+
+## Inputs
+
+| Title         | Data Type | Description                                                                |
+| ------------- | --------- | -------------------------------------------------------------------------- |
+| Server Config | `object`  | Configuration for the MCP server connection (when using dynamic config)     |
+| Tool ID       | `string`  | ID of the tool to execute (when using dynamic tool selection)              |
+| Tool Params   | `object`  | Parameters for tool execution (when using dynamic parameters)              |
+
+## Outputs
+
+| Title      | Data Type | Description                                                |
+| ---------- | --------- | ---------------------------------------------------------- |
+| Output     | `object`  | The result from the executed tool                          |
+| State      | `string`  | Current connection status ('success', 'error')             |
+| Info       | `object`  | Server capabilities and security settings                  |
+
+## Editor Settings
+
+| Setting                     | Description                                          | Default |
+| --------------------------- | ---------------------------------------------------- | ------- |
+| Server Configuration        | JSON configuration for the MCP server                | `{}`    |
+| Tool ID                     | ID of the tool to execute                           | `""`    |
+| Tool Parameters             | JSON configuration for tool parameters               | `{}`    |
+| Require Tool Permission     | Whether tool execution requires explicit permission  | `true`  |
+| Error on Connection Failure | Whether to error on connection issues                | `true`  |
+
+## Example Configuration
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+  "env": {
+    "BRAVE_API_KEY": "YOUR_API_KEY_HERE"
+  }
+}
+```
+
+## Security Considerations
+
+1. **Tool Permissions**: By default, tool execution requires explicit permission. This can be disabled for trusted tools.
+2. **API Keys**: Store sensitive data like API keys in environment variables.
+3. **Data Privacy**: The node only sends required data to the MCP server.
+
+## Protocol Support
+
+The node implements the Model Context Protocol, supporting:
+
+1. **Connection Lifecycle**
+   - Server initialization
+   - Capability negotiation
+   - Graceful termination
+
+2. **Standard Operations**
+   - Tool execution
+   - Resource access
+   - Sampling operations
+
+3. **Error Handling**
+   - Validation errors
+   - Runtime errors
+   - Security violations
+
+## Example Usage
+
+1. **Basic Tool Execution**
+   - Configure server settings
+   - Specify tool ID and parameters
+   - Connect outputs to other nodes
+
+2. **Dynamic Configuration**
+   - Enable input toggles
+   - Connect configuration from other nodes
+   - Handle dynamic tool selection
+
+## Notes
+
+- The node maintains server connections efficiently
+- Supports multiple server instances
+- Implements protocol-compliant error handling
+- Provides detailed capability information 

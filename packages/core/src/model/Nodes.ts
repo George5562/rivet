@@ -216,6 +216,9 @@ export * from './nodes/DelegateFunctionCallNode.js';
 import { playAudioNode } from './nodes/PlayAudioNode.js';
 export * from './nodes/PlayAudioNode.js';
 
+import { mcpNode } from './nodes/MCPNode.js';
+export * from './nodes/MCPNode.js';
+
 export const registerBuiltInNodes = (registry: NodeRegistration) => {
   return registry
     .register(toYamlNode)
@@ -289,7 +292,8 @@ export const registerBuiltInNodes = (registry: NodeRegistration) => {
     .register(graphReferenceNode)
     .register(callGraphNode)
     .register(delegateFunctionCallNode)
-    .register(playAudioNode);
+    .register(playAudioNode)
+    .register(mcpNode);
 };
 
 let globalRivetNodeRegistry = registerBuiltInNodes(new NodeRegistration());

@@ -13,7 +13,11 @@ import type {
   ToolInfo,
   SampleRequest,
   SampleResponse,
+  SecuritySettings,
+  MCPServerConfigWithSecurity,
 } from './types.js';
+import { MCPError, MCPErrorCode } from './types.js';
+import { SecurityManager } from './security/SecurityManager.js';
 
 interface ServerState {
   process: ChildProcess;
@@ -28,6 +32,7 @@ interface ServerState {
     }
   >;
   resourceWatchers: Map<string, EventEmitter>;
+  security: SecurityManager;
 }
 
 /**
@@ -37,18 +42,42 @@ export class MCPProcessManager {
   private readonly servers: Map<string, ServerState> = new Map();
 
   /**
-   * Initialize a connection to an MCP server
-   * Following protocol_construction.connection_lifecycle.initialization
+   * Validate server configuration
    */
-  async initialize(serverId: string, config: MCPServerConfig): Promise<void> {
+  private validateConfig(config: MCPServerConfig): void {
+    if (!config.command) {
+      throw new MCPError(MCPErrorCode.ValidationError, 'Server command is required', { field: 'command' });
+    }
+    if (!Array.isArray(config.args)) {
+      throw new MCPError(MCPErrorCode.ValidationError, 'Server args must be an array', { field: 'args' });
+    }
+  }
+
+  /**
+   * Initialize a connection to an MCP server with error handling
+   */
+  async initialize(serverId: string, config: MCPServerConfigWithSecurity): Promise<void> {
     try {
-      // 1. Start the server process
+      // Validate configuration
+      this.validateConfig(config);
+
+      // Create security manager
+      const security = new SecurityManager(config.security);
+
+      // Start the server process
       const serverProcess = spawn(config.command, config.args, {
         env: { ...process.env, ...config.env },
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 
-      // Store initial state
+      // Handle process errors
+      serverProcess.on('error', (err) => {
+        throw new MCPError(MCPErrorCode.ConnectionError, `Failed to start server process: ${err.message}`, {
+          originalError: err,
+        });
+      });
+
+      // Store initial state with security manager
       this.servers.set(serverId, {
         process: serverProcess,
         capabilities: [],
@@ -56,98 +85,108 @@ export class MCPProcessManager {
         requestId: 1,
         pendingRequests: new Map(),
         resourceWatchers: new Map(),
+        security,
       });
 
-      // Set up message handling
+      // Set up message handling with error handling
       this.setupMessageHandling(serverId, serverProcess);
 
-      // 2. Protocol handshake
-      const initResponse = await this.sendRequest(serverId, 'initialize', {
-        capabilities: {
-          resources: true,
-          tools: true,
-          sampling: true,
-        },
-        version: '1.0.0',
-      });
+      try {
+        // Protocol handshake
+        const initResponse = await this.sendRequest(serverId, 'initialize', {
+          capabilities: {
+            resources: true,
+            tools: true,
+            sampling: true,
+          },
+          version: '1.0.0',
+        });
 
-      // 3. Store server capabilities
-      const state = this.servers.get(serverId)!;
-      if (initResponse.capabilities) {
-        state.capabilities = Object.keys(initResponse.capabilities).filter((key) => initResponse.capabilities[key]);
+        // Validate response
+        if (!initResponse || typeof initResponse !== 'object') {
+          throw new MCPError(MCPErrorCode.InvalidRequest, 'Invalid initialization response', {
+            response: initResponse,
+          });
+        }
+
+        // Store server capabilities
+        const state = this.servers.get(serverId)!;
+        if (initResponse.capabilities) {
+          state.capabilities = Object.keys(initResponse.capabilities).filter((key) => initResponse.capabilities[key]);
+        }
+
+        // Send initialized notification
+        await this.sendNotification(serverId, 'initialized', {});
+
+        // Update server state
+        state.status = 'connected';
+      } catch (err) {
+        // Handle initialization errors
+        await this.handleInitializationError(serverId, err);
       }
-
-      // 4. Send initialized notification
-      await this.sendNotification(serverId, 'initialized', {});
-
-      // Update server state
-      state.status = 'connected';
     } catch (err) {
-      // Handle initialization errors
-      const state = this.servers.get(serverId);
-      if (state) {
-        state.status = 'error';
-        state.process.kill();
-        this.servers.delete(serverId);
-      }
-      throw new Error(`Failed to initialize MCP server ${serverId}: ${err}`);
+      // Handle startup errors
+      await this.handleStartupError(serverId, err);
     }
   }
 
   /**
-   * Terminate a server connection following protocol_construction.connection_lifecycle.termination
+   * Handle initialization phase errors
    */
-  async shutdown(serverId: string): Promise<void> {
+  private async handleInitializationError(serverId: string, err: unknown): Promise<void> {
     const state = this.servers.get(serverId);
-    if (!state) return;
-
-    try {
-      // 1. Send shutdown request
-      await this.sendRequest(serverId, 'shutdown', {});
-
-      // 2. Cleanup resources
+    if (state) {
+      state.status = 'error';
+      try {
+        // Try to send shutdown notification
+        await this.sendNotification(serverId, 'shutdown', {
+          error:
+            err instanceof MCPError
+              ? err.toJsonRpcError()
+              : {
+                  code: MCPErrorCode.InternalError,
+                  message: err instanceof Error ? err.message : 'Unknown error',
+                },
+        });
+      } catch {
+        // Ignore shutdown notification errors
+      }
+      // Clean up resources
       await this.cleanupResources(serverId);
-
-      // 3. Send exit notification
-      await this.sendNotification(serverId, 'exit', {});
-
-      // 4. Kill process and remove state
+      // Kill process
       state.process.kill();
       this.servers.delete(serverId);
-    } catch (err) {
-      // Force cleanup on error
-      state.process.kill();
-      this.servers.delete(serverId);
-      throw new Error(`Error during MCP server shutdown: ${err}`);
     }
+    throw err instanceof MCPError
+      ? err
+      : new MCPError(
+          MCPErrorCode.ConnectionError,
+          `Initialization failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          { originalError: err },
+        );
   }
 
   /**
-   * Check if a server is healthy and connected
+   * Handle startup errors
    */
-  async checkServerHealth(serverId: string): Promise<boolean> {
+  private async handleStartupError(serverId: string, err: unknown): Promise<void> {
     const state = this.servers.get(serverId);
-    if (!state) return false;
-    return state.status === 'connected' && !state.process.killed;
+    if (state) {
+      state.status = 'error';
+      state.process.kill();
+      this.servers.delete(serverId);
+    }
+    throw err instanceof MCPError
+      ? err
+      : new MCPError(
+          MCPErrorCode.ConnectionError,
+          `Server startup failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          { originalError: err },
+        );
   }
 
   /**
-   * Get server capabilities and status
-   */
-  getServerInfo(serverId: string) {
-    const state = this.servers.get(serverId);
-    if (!state) throw new Error(`Server ${serverId} not found`);
-
-    return {
-      capabilities: state.capabilities,
-      status: state.status,
-    };
-  }
-
-  // Private helper methods for protocol communication
-
-  /**
-   * Set up message handling for a server process
+   * Enhanced message handling with error handling
    */
   private setupMessageHandling(serverId: string, serverProcess: ChildProcess): void {
     serverProcess.stdout!.on('data', (data: Buffer) => {
@@ -156,31 +195,45 @@ export class MCPProcessManager {
         for (const message of messages) {
           if (!message) continue;
 
-          const parsed = JSON.parse(message);
+          try {
+            const parsed = JSON.parse(message);
 
-          // Handle notifications (like resource watch events)
-          if (!parsed.id) {
-            this.handleNotification(serverId, parsed as JsonRpcNotification);
-            continue;
-          }
-
-          // Handle regular responses
-          const response = parsed as JsonRpcResponse;
-          const state = this.servers.get(serverId);
-          if (!state) return;
-
-          const pending = state.pendingRequests.get(response.id as number);
-          if (pending) {
-            if (response.error) {
-              pending.reject(new Error(response.error.message));
-            } else {
-              pending.resolve(response.result);
+            // Handle notifications
+            if (!parsed.id) {
+              this.handleNotification(serverId, parsed as JsonRpcNotification);
+              continue;
             }
-            state.pendingRequests.delete(response.id as number);
+
+            // Handle responses
+            const response = parsed as JsonRpcResponse;
+            const state = this.servers.get(serverId);
+            if (!state) return;
+
+            const pending = state.pendingRequests.get(response.id as number);
+            if (pending) {
+              if (response.error) {
+                // Convert JSON-RPC error to MCPError
+                pending.reject(new MCPError(response.error.code, response.error.message, response.error.data));
+              } else {
+                pending.resolve(response.result);
+              }
+              state.pendingRequests.delete(response.id as number);
+            }
+          } catch (err: unknown) {
+            // Handle JSON parse errors
+            throw new MCPError(
+              MCPErrorCode.ParseError,
+              `Invalid JSON in server message: ${err instanceof Error ? err.message : String(err)}`,
+              { message },
+            );
           }
         }
       } catch (err) {
         console.error(`Error handling MCP server message: ${err}`);
+        const state = this.servers.get(serverId);
+        if (state) {
+          state.status = 'error';
+        }
       }
     });
 
@@ -198,16 +251,29 @@ export class MCPProcessManager {
 
     serverProcess.on('exit', (code) => {
       console.log(`MCP server ${serverId} exited with code ${code}`);
+      // Clean up on unexpected exit
+      if (code !== 0) {
+        const state = this.servers.get(serverId);
+        if (state && state.status !== 'error') {
+          state.status = 'error';
+        }
+      }
       this.servers.delete(serverId);
     });
   }
 
   /**
-   * Send a JSON-RPC request to a server
+   * Enhanced request sending with error handling
    */
   private async sendRequest(serverId: string, method: string, params: any): Promise<any> {
     const state = this.servers.get(serverId);
-    if (!state) throw new Error(`Server ${serverId} not found`);
+    if (!state) {
+      throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
+    }
+
+    if (state.status === 'error') {
+      throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} is in error state`);
+    }
 
     const request: JsonRpcRequest = {
       jsonrpc: '2.0',
@@ -217,8 +283,19 @@ export class MCPProcessManager {
     };
 
     return new Promise((resolve, reject) => {
-      state.pendingRequests.set(request.id as number, { resolve, reject });
-      state.process.stdin!.write(JSON.stringify(request) + '\n');
+      try {
+        state.pendingRequests.set(request.id as number, { resolve, reject });
+        state.process.stdin!.write(JSON.stringify(request) + '\n');
+      } catch (err: unknown) {
+        state.pendingRequests.delete(request.id as number);
+        reject(
+          new MCPError(
+            MCPErrorCode.ConnectionError,
+            `Failed to send request: ${err instanceof Error ? err.message : String(err)}`,
+            { request },
+          ),
+        );
+      }
     });
   }
 
@@ -275,9 +352,9 @@ export class MCPProcessManager {
       state.resourceWatchers.clear();
     }
 
-    // Reject pending requests
+    // Reject pending requests with connection error
     for (const [id, { reject }] of state.pendingRequests) {
-      reject(new Error('Server shutting down'));
+      reject(new MCPError(MCPErrorCode.ConnectionError, 'Server connection terminated', { serverId }));
       state.pendingRequests.delete(id);
     }
   }
@@ -287,9 +364,14 @@ export class MCPProcessManager {
    */
   private verifyCapability(serverId: string, capability: string): void {
     const state = this.servers.get(serverId);
-    if (!state) throw new Error(`Server ${serverId} not found`);
+    if (!state) {
+      throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
+    }
     if (!state.capabilities.includes(capability)) {
-      throw new Error(`Server ${serverId} does not support ${capability}`);
+      throw new MCPError(MCPErrorCode.CapabilityNotSupported, `Server ${serverId} does not support ${capability}`, {
+        capability,
+        availableCapabilities: state.capabilities,
+      });
     }
   }
 
@@ -358,11 +440,23 @@ export class MCPProcessManager {
   }
 
   /**
-   * Execute a tool
+   * Execute a tool with security validation
    */
   async executeTool(serverId: string, request: ToolRequest): Promise<any> {
     this.verifyCapability(serverId, 'tools');
-    return this.sendRequest(serverId, 'executeTool', request);
+
+    const state = this.servers.get(serverId);
+    if (!state) {
+      throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
+    }
+
+    // Validate tool execution permission
+    state.security.validateToolExecution(request);
+
+    // Sanitize request parameters
+    const sanitizedRequest = state.security.sanitizeToolRequest(request);
+
+    return this.sendRequest(serverId, 'executeTool', sanitizedRequest);
   }
 
   /**
@@ -397,5 +491,27 @@ export class MCPProcessManager {
   async cancelSample(serverId: string, sampleId: string): Promise<void> {
     this.verifyCapability(serverId, 'sampling');
     await this.sendRequest(serverId, 'cancelSample', { sampleId });
+  }
+
+  /**
+   * Update security settings for a server
+   */
+  updateSecuritySettings(serverId: string, settings: Partial<SecuritySettings>): void {
+    const state = this.servers.get(serverId);
+    if (!state) {
+      throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
+    }
+    state.security.updateSettings(settings);
+  }
+
+  /**
+   * Get current security settings for a server
+   */
+  getSecuritySettings(serverId: string): SecuritySettings {
+    const state = this.servers.get(serverId);
+    if (!state) {
+      throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
+    }
+    return state.security.getSettings();
   }
 }

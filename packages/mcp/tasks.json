@@ -38,7 +38,7 @@
       "id": "core-3",
       "title": "Implement Error Handling",
       "description": "Add protocol-compliant error handling for validation, runtime, and security errors",
-      "status": "todo",
+      "status": "completed",
       "priority": "high",
       "dependencies": ["core-2"]
     },
@@ -46,7 +46,7 @@
       "id": "security-1",
       "title": "Implement Security Layer",
       "description": "Add user consent, data privacy, tool safety, and sampling security measures",
-      "status": "todo",
+      "status": "completed",
       "priority": "high",
       "dependencies": ["core-2"]
     },
@@ -54,15 +54,15 @@
       "id": "node-1",
       "title": "Create Basic Node Structure",
       "description": "Create MCPNode class with configuration handling and process manager integration",
-      "status": "todo",
+      "status": "completed",
       "priority": "high",
       "dependencies": ["core-3", "security-1"]
     },
     {
       "id": "node-2",
-      "title": "Implement Node UI",
+      "title": "Create Node UI",
       "description": "Create node UI component showing connection status, capabilities, and security controls",
-      "status": "todo",
+      "status": "completed",
       "priority": "medium",
       "dependencies": ["node-1"]
     },

@@ -157,3 +157,70 @@ export interface ResourceWatchEvent {
   /** Resource data */
   resource: ResourceResponse;
 }
+
+/**
+ * MCP Error codes following JSON-RPC 2.0 spec with protocol-specific extensions
+ */
+export enum MCPErrorCode {
+  // JSON-RPC 2.0 reserved codes
+  ParseError = -32700,
+  InvalidRequest = -32600,
+  MethodNotFound = -32601,
+  InvalidParams = -32602,
+  InternalError = -32603,
+
+  // MCP Protocol specific codes
+  ValidationError = -33000,
+  SecurityError = -33001,
+  ResourceNotFound = -33002,
+  ResourceAccessDenied = -33003,
+  ToolNotFound = -33004,
+  ToolExecutionError = -33005,
+  SamplingError = -33006,
+  CapabilityNotSupported = -33007,
+  ConnectionError = -33008,
+}
+
+/**
+ * MCP Protocol error with additional context
+ */
+export class MCPError extends Error {
+  constructor(
+    public readonly code: MCPErrorCode,
+    message: string,
+    public readonly data?: any,
+  ) {
+    super(message);
+    this.name = 'MCPError';
+  }
+
+  /**
+   * Convert to JSON-RPC error object
+   */
+  toJsonRpcError(): JsonRpcResponse['error'] {
+    return {
+      code: this.code,
+      message: this.message,
+      data: this.data,
+    };
+  }
+}
+
+/**
+ * Security settings for MCP operations
+ */
+export interface SecuritySettings {
+  /** Whether tool execution requires explicit permission */
+  requireToolPermission: boolean;
+
+  /** Whether the current tool execution is permitted */
+  isToolExecutionPermitted: boolean;
+}
+
+/**
+ * Extended server configuration with security settings
+ */
+export interface MCPServerConfigWithSecurity extends MCPServerConfig {
+  /** Security settings for the server */
+  security?: SecuritySettings;
+}

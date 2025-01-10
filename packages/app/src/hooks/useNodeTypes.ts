@@ -23,6 +23,7 @@ import { datasetNearestNeighborsNodeDescriptor } from '../components/nodes/Datas
 import { getDatasetRowNodeDescriptor } from '../components/nodes/GetDatasetRowNode';
 import { replaceDatasetNodeDescriptor } from '../components/nodes/ReplaceDatasetNode';
 import { type InputsOrOutputsWithRefs } from '../state/dataFlow';
+import { mcpNodeDescriptor } from '../components/nodes/MCPNode.js';
 
 export type UnknownNodeComponentDescriptor = {
   Body?: FC<{ node: ChartNode }>;
@@ -63,6 +64,7 @@ const overriddenDescriptors: Partial<NodeComponentDescriptors> = {
   datasetNearestNeighbors: datasetNearestNeighborsNodeDescriptor,
   getDatasetRow: getDatasetRowNodeDescriptor,
   replaceDataset: replaceDatasetNodeDescriptor,
+  mcp: mcpNodeDescriptor,
 };
 
 export function useNodeTypes(): NodeComponentDescriptors {
