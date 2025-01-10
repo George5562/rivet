@@ -99,6 +99,19 @@ The MCP (Model Context Protocol) Node enables interaction with MCP-compliant ser
   - Status display
   - Configuration interface
 
+### UI Assets
+
+- `packages/app/src/assets/node_images/`
+  - `mcp_node.png`: Node icon for UI display
+  - Based on HTTP call node design pattern
+  - Used in node palette and graph display
+
+### UI Registration
+
+- `packages/app/src/hooks/`
+  - `useNodeTypes.ts`: Node descriptor registration
+  - `useBuiltInNodeImages.ts`: Node image registration
+
 ### Documentation
 
 - `packages/docs/docs/node-reference/`
