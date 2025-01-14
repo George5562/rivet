@@ -12,8 +12,8 @@ import { type Inputs, type Outputs } from '../GraphProcessor.js';
 import { type EditorDefinition } from '../EditorDefinition.js';
 import { type InternalProcessContext } from '../../index.js';
 import { coerceType, dedent } from '../../utils/index.js';
-import { MCPProcessManager } from '../../nodes/mcp/MCPProcessManager.js';
-import { type MCPServerConfigWithSecurity, type ToolRequest } from '../../nodes/mcp/types.js';
+import { MCPProcessManager } from '@ironclad/rivet-app-executor';
+import type { MCPServerConfigWithSecurity, ToolRequest } from '@ironclad/rivet-mcp-shared';
 
 export type MCPNode = ChartNode<'mcp', MCPNodeData>;
 

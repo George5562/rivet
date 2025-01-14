@@ -1,0 +1,24 @@
+{
+  "name": "@ironclad/rivet-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "dependencies": {
+    "@ironclad/rivet-core": "workspace:*",
+    "@ironclad/rivet-mcp-shared": "workspace:*",
+    "@tauri-apps/api": "^2.0.0",
+    "event-target-shim": "^6.0.2",
+    "nanoid": "^3.3.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

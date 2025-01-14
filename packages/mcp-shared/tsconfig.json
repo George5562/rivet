@@ -10,7 +10,6 @@
     "esModuleInterop": false
   },
   "include": ["src"],
-  "references": [{ "path": "../mcp-shared" }],
   "ts-node": {
     "swc": true,
     "experimentalResolver": true,

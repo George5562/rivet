@@ -1,0 +1,137 @@
+{
+  "build_commands": {
+    "build:all": {
+      "purpose": "Build all packages in parallel with dependency order",
+      "command": "yarn workspaces foreach -ptv run build",
+      "comments": ["-p: run in parallel", "-t: respect topology (dependencies)", "-v: verbose output"]
+    },
+    "build:dev": {
+      "purpose": "Build packages in sequence for development",
+      "command": "yarn workspace @ironclad/rivet-mcp-shared build && yarn workspace @ironclad/rivet-app-executor build && yarn workspace @ironclad/rivet-core build",
+      "comments": ["Explicit ordering for predictable builds", "Better for development as errors are easier to track"]
+    }
+  },
+  "packages": {
+    "core": {
+      "src/model/nodes": {
+        "MCPNode.ts": {
+          "purpose": "Core node definition and registration",
+          "exports": ["MCPNode type", "MCPNodeData type", "mcpNode"],
+          "imports": ["@ironclad/rivet-app-executor", "@ironclad/rivet-mcp-shared"],
+          "status": "Complete"
+        }
+      }
+    },
+    "mcp": {
+      "src/browser": {
+        "MCPNode.ts": {
+          "purpose": "Browser-side node implementation",
+          "exports": ["MCPNode"],
+          "imports": ["@ironclad/rivet-core", "@ironclad/rivet-mcp-shared"],
+          "status": "Complete"
+        },
+        "MCPBrowserClient.ts": {
+          "purpose": "Browser-side MCP client",
+          "exports": ["MCPBrowserClient"],
+          "imports": ["@tauri-apps/api", "event-target-shim", "@ironclad/rivet-mcp-shared"],
+          "status": "Complete"
+        }
+      },
+      "src/index.ts": {
+        "purpose": "Package entry point",
+        "exports": ["MCPNode", "MCPBrowserClient"],
+        "status": "Complete"
+      }
+    },
+    "app-executor": {
+      "build": {
+        "dependencies": ["mcp-shared"],
+        "comments": [
+          "Must build mcp-shared first to ensure types and exports are available",
+          "Added explicit build dependency in package.json scripts"
+        ]
+      },
+      "src": {
+        "index.ts": {
+          "purpose": "Package entry point",
+          "exports": ["MCPProcessManager"],
+          "status": "Complete"
+        },
+        "mcp": {
+          "MCPProcessManager.ts": {
+            "purpose": "Node.js-side process management",
+            "exports": ["MCPProcessManager"],
+            "imports": ["child_process", "@ironclad/rivet-mcp-shared"],
+            "comments": [
+              "Using Node.js built-in modules without node: prefix for better ESM compatibility",
+              "Security types imported directly from main package export"
+            ],
+            "status": "Complete"
+          },
+          "types.ts": {
+            "purpose": "Node.js-specific type extensions",
+            "exports": ["ServerState"],
+            "imports": ["child_process", "events", "@ironclad/rivet-mcp-shared"],
+            "comments": [
+              "Using Node.js built-in modules without node: prefix for better ESM compatibility",
+              "Security types imported directly from main package export"
+            ],
+            "status": "Complete"
+          }
+        }
+      },
+      "tsconfig.json": {
+        "purpose": "TypeScript configuration",
+        "config": {
+          "moduleResolution": "node16",
+          "module": "node16",
+          "types": ["node"],
+          "allowSyntheticDefaultImports": true,
+          "strict": true
+        },
+        "comments": [
+          "Using node16 moduleResolution for better ESM and CommonJS compatibility",
+          "Explicit node types for built-in modules",
+          "Strict mode enabled for better type safety"
+        ],
+        "status": "Complete"
+      }
+    },
+    "mcp-shared": {
+      "src": {
+        "index.ts": {
+          "purpose": "Package entry point",
+          "exports": ["All types from types.ts", "SecurityManager, MCPError, MCPErrorCode from security module"],
+          "comments": [
+            "Explicitly re-exports security module types for better type visibility",
+            "Uses named exports for better tree-shaking",
+            "Must be built before app-executor"
+          ],
+          "status": "Complete"
+        },
+        "types.ts": {
+          "purpose": "Shared type definitions",
+          "exports": [
+            "MCPServerConfig",
+            "MCPServerConfigWithSecurity",
+            "SecuritySettings",
+            "JsonRpcRequest",
+            "JsonRpcResponse",
+            "ResourceRequest",
+            "ResourceResponse",
+            "ToolRequest",
+            "ToolInfo"
+          ],
+          "status": "Complete"
+        },
+        "security": {
+          "SecurityManager.ts": {
+            "purpose": "Security management and error handling",
+            "exports": ["SecurityManager", "MCPError", "MCPErrorCode"],
+            "status": "Complete"
+          }
+        }
+      }
+    }
+  }
+}

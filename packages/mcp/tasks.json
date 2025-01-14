@@ -1,121 +1,28 @@
 {
-  "project": "MCP Node Implementation",
-  "description": "Implement MCP node for Rivet, starting with Brave Search integration",
   "tasks": [
     {
-      "id": "setup-1",
-      "title": "Setup Node Executor Environment",
-      "description": "Set up core package watcher and app-executor in dev mode",
-      "status": "completed",
-      "priority": "high",
-      "dependencies": []
-    },
-    {
-      "id": "setup-2",
-      "title": "Create MCP Server Configuration",
-      "description": "Create and configure MCP server configuration file for Brave Search integration",
-      "status": "completed",
-      "priority": "high",
-      "dependencies": []
+      "id": "core",
+      "title": "Core Implementation",
+      "description": "Implement core MCP functionality",
+      "tasks": ["core-1", "core-2", "core-3"]
     },
     {
       "id": "core-1",
-      "title": "Implement Connection Lifecycle",
-      "description": "Implement connection initialization, capability negotiation, and termination following MCP protocol",
-      "status": "completed",
-      "priority": "high",
-      "dependencies": ["setup-1", "setup-2"]
+      "title": "Browser Implementation",
+      "description": "Implement browser-side components",
+      "status": "complete"
     },
     {
       "id": "core-2",
-      "title": "Implement Standard Operations",
-      "description": "Add support for resource, tool, and sampling operations as defined in MCP specification",
-      "status": "completed",
-      "priority": "high",
-      "dependencies": ["core-1"]
+      "title": "Node.js Implementation",
+      "description": "Implement Node.js-side components",
+      "status": "complete"
     },
     {
       "id": "core-3",
-      "title": "Implement Error Handling",
-      "description": "Add protocol-compliant error handling for validation, runtime, and security errors",
-      "status": "completed",
-      "priority": "high",
-      "dependencies": ["core-2"]
-    },
-    {
-      "id": "security-1",
-      "title": "Implement Security Layer",
-      "description": "Add user consent, data privacy, tool safety, and sampling security measures",
-      "status": "completed",
-      "priority": "high",
-      "dependencies": ["core-2"]
-    },
-    {
-      "id": "node-1",
-      "title": "Create Basic Node Structure",
-      "description": "Create MCPNode class with configuration handling and process manager integration",
-      "status": "completed",
-      "priority": "high",
-      "dependencies": ["core-3", "security-1"]
-    },
-    {
-      "id": "node-2",
-      "title": "Create Node UI",
-      "description": "Create node UI component showing connection status, capabilities, and security controls",
-      "status": "completed",
-      "priority": "medium",
-      "dependencies": ["node-1"]
-    },
-    {
-      "id": "node-3",
-      "title": "Add Node Documentation",
-      "description": "Create comprehensive documentation including setup, security, and protocol details",
-      "status": "todo",
-      "priority": "medium",
-      "dependencies": ["node-2"]
-    },
-    {
-      "id": "test-1",
-      "title": "Implement Unit Tests",
-      "description": "Add tests for protocol handling, lifecycle management, and security measures",
-      "status": "todo",
-      "priority": "high",
-      "dependencies": ["node-1"]
-    },
-    {
-      "id": "test-2",
-      "title": "Add Integration Tests",
-      "description": "Create end-to-end tests for server communication and feature verification",
-      "status": "todo",
-      "priority": "medium",
-      "dependencies": ["test-1"]
+      "title": "Security Implementation",
+      "description": "Implement security features",
+      "status": "complete"
     }
-  ],
-  "metadata": {
-    "currentPhase": "setup",
-    "nextMilestone": "Basic Protocol Implementation",
-    "estimatedCompletion": "TBD",
-    "phases": [
-      {
-        "name": "setup",
-        "tasks": ["setup-1", "setup-2"]
-      },
-      {
-        "name": "core",
-        "tasks": ["core-1", "core-2", "core-3"]
-      },
-      {
-        "name": "security",
-        "tasks": ["security-1"]
-      },
-      {
-        "name": "node",
-        "tasks": ["node-1", "node-2", "node-3"]
-      },
-      {
-        "name": "testing",
-        "tasks": ["test-1", "test-2"]
-      }
-    ]
-  }
+  ]
 }

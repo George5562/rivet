@@ -1,23 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "rootDir": ".",
-    "declarationDir": "dist/types",
+    "rootDir": "src",
+    "composite": true,
+    "moduleResolution": "node16",
+    "module": "node16",
+    "types": ["node"],
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "verbatimModuleSyntax": true,
-    "noEmit": true,
-    "importsNotUsedAsValues": "remove"
+    "strict": true
   },
-  "include": ["src", "bin", "scripts"],
-  "ts-node": {
-    "swc": true,
-    "compilerOptions": {
-      "module": "CommonJS"
-    }
-  },
-  "references": [{ "path": "../core" }, { "path": "../node" }]
+  "include": ["src/**/*"],
+  "references": [{ "path": "../mcp-shared" }]
 }

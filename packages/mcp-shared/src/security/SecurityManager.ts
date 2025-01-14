@@ -1,4 +1,50 @@
-import { MCPError, MCPErrorCode, type SecuritySettings, type ToolRequest } from '../types.js';
+import type { SecuritySettings, ToolRequest } from '../types.js';
+
+/**
+ * Error codes for MCP operations following JSON-RPC 2.0 spec with protocol-specific extensions
+ */
+export enum MCPErrorCode {
+  // JSON-RPC 2.0 reserved codes
+  ParseError = -32700,
+  InvalidRequest = -32600,
+  MethodNotFound = -32601,
+  InvalidParams = -32602,
+  InternalError = -32603,
+
+  // MCP Protocol specific codes
+  ValidationError = -33000,
+  SecurityError = -33001,
+  ResourceNotFound = -33002,
+  ResourceAccessDenied = -33003,
+  ToolNotFound = -33004,
+  ToolExecutionError = -33005,
+  SamplingError = -33006,
+  CapabilityNotSupported = -33007,
+  ConnectionError = -33008,
+}
+
+/**
+ * Custom error class for MCP operations
+ */
+export class MCPError extends Error {
+  code: MCPErrorCode;
+  data?: any;
+
+  constructor(code: MCPErrorCode, message: string, data?: any) {
+    super(message);
+    this.name = 'MCPError';
+    this.code = code;
+    this.data = data;
+  }
+
+  toJsonRpcError() {
+    return {
+      code: this.code,
+      message: this.message,
+      data: this.data,
+    };
+  }
+}
 
 /**
  * Manages security for MCP operations
@@ -8,6 +54,12 @@ export class SecurityManager {
 
   constructor(settings?: Partial<SecuritySettings>) {
     this.settings = {
+      permissions: {
+        fs: false,
+        network: false,
+        process: false,
+        env: [],
+      },
       requireToolPermission: true,
       isToolExecutionPermitted: false,
       ...settings,

@@ -1,41 +1,15 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { EventEmitter } from 'node:events';
-
-// Import types from mcp-shared package
+import { spawn, type ChildProcess } from 'child_process';
+import { SecurityManager, MCPError, MCPErrorCode } from '@ironclad/rivet-mcp-shared';
 import type {
   MCPServerConfig,
+  MCPServerConfigWithSecurity,
   JsonRpcRequest,
   JsonRpcResponse,
   JsonRpcNotification,
-  ResourceRequest,
-  ResourceResponse,
   ToolRequest,
-  ToolInfo,
-  SampleRequest,
-  SampleResponse,
   SecuritySettings,
-  MCPServerConfigWithSecurity,
 } from '@ironclad/rivet-mcp-shared';
-
-// Import security module from mcp-shared
-import { MCPError, MCPErrorCode, SecurityManager } from '@ironclad/rivet-mcp-shared';
-
-// Local interface for server state management
-interface ServerState {
-  process: ChildProcess;
-  capabilities: string[];
-  status: 'initializing' | 'connected' | 'error';
-  requestId: number;
-  pendingRequests: Map<
-    number,
-    {
-      resolve: (value: any) => void;
-      reject: (error: Error) => void;
-    }
-  >;
-  resourceWatchers: Map<string, EventEmitter>;
-  security: SecurityManager;
-}
+import type { ServerState } from './types.js';
 
 /**
  * Manages MCP server processes and implements the Model Context Protocol lifecycle
@@ -67,7 +41,7 @@ export class MCPProcessManager {
       const security = new SecurityManager(config.security);
 
       // Start the server process
-      const serverProcess = spawn(config.command, config.args, {
+      const serverProcess = spawn(config.command, config.args ?? [], {
         env: { ...process.env, ...config.env },
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -144,7 +118,7 @@ export class MCPProcessManager {
         await this.sendNotification(serverId, 'shutdown', {
           error:
             err instanceof MCPError
-              ? err.toJsonRpcError()
+              ? (err as MCPError).toJsonRpcError()
               : {
                   code: MCPErrorCode.InternalError,
                   message: err instanceof Error ? err.message : 'Unknown error',
@@ -254,18 +228,20 @@ export class MCPProcessManager {
     serverProcess.on('exit', (code) => {
       console.log(`MCP server ${serverId} exited with code ${code}`);
       // Clean up on unexpected exit
-      if (code !== 0) {
-        const state = this.servers.get(serverId);
-        if (state && state.status !== 'error') {
-          state.status = 'error';
-        }
+      const state = this.servers.get(serverId);
+      if (state) {
+        state.status = 'error';
+        state.pendingRequests.forEach((pending) => {
+          pending.reject(new MCPError(MCPErrorCode.ConnectionError, 'Server connection terminated', { serverId }));
+        });
+        state.pendingRequests.clear();
+        state.resourceWatchers.clear();
       }
-      this.servers.delete(serverId);
     });
   }
 
   /**
-   * Enhanced request sending with error handling
+   * Send a request to the server
    */
   private async sendRequest(serverId: string, method: string, params: any): Promise<any> {
     const state = this.servers.get(serverId);
@@ -273,40 +249,27 @@ export class MCPProcessManager {
       throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
     }
 
-    if (state.status === 'error') {
-      throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} is in error state`);
-    }
-
     const request: JsonRpcRequest = {
       jsonrpc: '2.0',
+      id: state.requestId++,
       method,
       params,
-      id: state.requestId++,
     };
 
     return new Promise((resolve, reject) => {
-      try {
-        state.pendingRequests.set(request.id as number, { resolve, reject });
-        state.process.stdin!.write(JSON.stringify(request) + '\n');
-      } catch (err: unknown) {
-        state.pendingRequests.delete(request.id as number);
-        reject(
-          new MCPError(
-            MCPErrorCode.ConnectionError,
-            `Failed to send request: ${err instanceof Error ? err.message : String(err)}`,
-            { request },
-          ),
-        );
-      }
+      state.pendingRequests.set(request.id, { resolve, reject });
+      state.process.stdin!.write(JSON.stringify(request) + '\n');
     });
   }
 
   /**
-   * Send a JSON-RPC notification to a server
+   * Send a notification to the server
    */
   private async sendNotification(serverId: string, method: string, params: any): Promise<void> {
     const state = this.servers.get(serverId);
-    if (!state) throw new Error(`Server ${serverId} not found`);
+    if (!state) {
+      throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
+    }
 
     const notification: JsonRpcNotification = {
       jsonrpc: '2.0',
@@ -324,128 +287,83 @@ export class MCPProcessManager {
     const state = this.servers.get(serverId);
     if (!state) return;
 
-    if (notification.method === 'resourceUpdate') {
-      const { id, type, data } = notification.params;
-      const emitter = state.resourceWatchers.get(id);
-      if (emitter) {
-        emitter.emit('update', { id, type, data });
-      }
+    switch (notification.method) {
+      case 'resource/update':
+        this.handleResourceUpdate(serverId, notification.params);
+        break;
+      case 'resource/delete':
+        this.handleResourceDelete(serverId, notification.params);
+        break;
+      default:
+        console.warn(`Unknown notification method: ${notification.method}`);
     }
   }
 
   /**
-   * Clean up resources for a server
+   * Handle resource update notifications
+   */
+  private handleResourceUpdate(serverId: string, params: any): void {
+    const state = this.servers.get(serverId);
+    if (!state) return;
+
+    const resourceId = params.id;
+    const watcher = state.resourceWatchers.get(resourceId);
+    if (watcher) {
+      watcher.emit('update', params);
+    }
+  }
+
+  /**
+   * Handle resource delete notifications
+   */
+  private handleResourceDelete(serverId: string, params: any): void {
+    const state = this.servers.get(serverId);
+    if (!state) return;
+
+    const resourceId = params.id;
+    const watcher = state.resourceWatchers.get(resourceId);
+    if (watcher) {
+      watcher.emit('delete', params);
+      state.resourceWatchers.delete(resourceId);
+    }
+  }
+
+  /**
+   * Clean up server resources
    */
   private async cleanupResources(serverId: string): Promise<void> {
     const state = this.servers.get(serverId);
     if (!state) return;
 
-    // Clean up resource watchers
-    if (state.resourceWatchers) {
-      for (const [resourceId, emitter] of state.resourceWatchers) {
-        emitter.removeAllListeners();
-        try {
-          await this.unwatchResource(serverId, resourceId);
-        } catch (err) {
-          console.error(`Error cleaning up resource watcher: ${err}`);
-        }
-      }
-      state.resourceWatchers.clear();
-    }
+    // Clear pending requests
+    state.pendingRequests.clear();
 
-    // Reject pending requests with connection error
-    for (const [id, { reject }] of state.pendingRequests) {
-      reject(new MCPError(MCPErrorCode.ConnectionError, 'Server connection terminated', { serverId }));
-      state.pendingRequests.delete(id);
-    }
+    // Clear resource watchers
+    state.resourceWatchers.clear();
   }
 
   /**
-   * Verify a server supports a specific capability
+   * Check if server supports a capability
    */
-  private verifyCapability(serverId: string, capability: string): void {
+  private checkCapability(serverId: string, capability: string): void {
     const state = this.servers.get(serverId);
     if (!state) {
       throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
     }
+
     if (!state.capabilities.includes(capability)) {
       throw new MCPError(MCPErrorCode.CapabilityNotSupported, `Server ${serverId} does not support ${capability}`, {
+        serverId,
         capability,
-        availableCapabilities: state.capabilities,
+        supportedCapabilities: state.capabilities,
       });
     }
   }
 
-  // Resource Operations
-
   /**
-   * Get a specific resource from the server
-   */
-  async getResource(serverId: string, request: ResourceRequest): Promise<ResourceResponse> {
-    this.verifyCapability(serverId, 'resources');
-    return this.sendRequest(serverId, 'getResource', request);
-  }
-
-  /**
-   * List available resources of a specific type
-   */
-  async listResources(serverId: string, type?: string): Promise<ResourceResponse[]> {
-    this.verifyCapability(serverId, 'resources');
-    return this.sendRequest(serverId, 'listResources', { type });
-  }
-
-  /**
-   * Watch a resource for changes
-   */
-  async watchResource(serverId: string, request: ResourceRequest): Promise<EventEmitter> {
-    this.verifyCapability(serverId, 'resources');
-
-    const state = this.servers.get(serverId)!;
-    const emitter = new EventEmitter();
-
-    // Store the watcher
-    if (!state.resourceWatchers) {
-      state.resourceWatchers = new Map();
-    }
-    state.resourceWatchers.set(request.id, emitter);
-
-    // Register the watch
-    await this.sendRequest(serverId, 'watchResource', request);
-
-    return emitter;
-  }
-
-  /**
-   * Stop watching a resource
-   */
-  async unwatchResource(serverId: string, resourceId: string): Promise<void> {
-    const state = this.servers.get(serverId);
-    if (!state?.resourceWatchers) return;
-
-    const emitter = state.resourceWatchers.get(resourceId);
-    if (emitter) {
-      emitter.removeAllListeners();
-      state.resourceWatchers.delete(resourceId);
-      await this.sendRequest(serverId, 'unwatchResource', { resourceId });
-    }
-  }
-
-  // Tool Operations
-
-  /**
-   * List available tools
-   */
-  async listTools(serverId: string): Promise<ToolInfo[]> {
-    this.verifyCapability(serverId, 'tools');
-    return this.sendRequest(serverId, 'listTools', {});
-  }
-
-  /**
-   * Execute a tool with security validation
+   * Execute a tool on the server
    */
   async executeTool(serverId: string, request: ToolRequest): Promise<any> {
-    this.verifyCapability(serverId, 'tools');
-
     const state = this.servers.get(serverId);
     if (!state) {
       throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
@@ -457,41 +375,8 @@ export class MCPProcessManager {
     // Sanitize request parameters
     const sanitizedRequest = state.security.sanitizeToolRequest(request);
 
-    return this.sendRequest(serverId, 'executeTool', sanitizedRequest);
-  }
-
-  /**
-   * Cancel a running tool execution
-   */
-  async cancelTool(serverId: string, toolId: string): Promise<void> {
-    this.verifyCapability(serverId, 'tools');
-    await this.sendRequest(serverId, 'cancelTool', { toolId });
-  }
-
-  // Sampling Operations
-
-  /**
-   * Request a sample from the server
-   */
-  async requestSample(serverId: string, request: SampleRequest): Promise<SampleResponse> {
-    this.verifyCapability(serverId, 'sampling');
-    return this.sendRequest(serverId, 'requestSample', request);
-  }
-
-  /**
-   * Provide a sample result back to the server
-   */
-  async provideSample(serverId: string, sampleId: string, result: any): Promise<void> {
-    this.verifyCapability(serverId, 'sampling');
-    await this.sendRequest(serverId, 'provideSample', { sampleId, result });
-  }
-
-  /**
-   * Cancel a pending sample request
-   */
-  async cancelSample(serverId: string, sampleId: string): Promise<void> {
-    this.verifyCapability(serverId, 'sampling');
-    await this.sendRequest(serverId, 'cancelSample', { sampleId });
+    // Execute tool
+    return this.sendRequest(serverId, 'tool/execute', sanitizedRequest);
   }
 
   /**
@@ -502,6 +387,7 @@ export class MCPProcessManager {
     if (!state) {
       throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
     }
+
     state.security.updateSettings(settings);
   }
 
@@ -513,6 +399,7 @@ export class MCPProcessManager {
     if (!state) {
       throw new MCPError(MCPErrorCode.ConnectionError, `Server ${serverId} not found`);
     }
+
     return state.security.getSettings();
   }
 }
