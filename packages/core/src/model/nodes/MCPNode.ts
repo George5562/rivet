@@ -12,7 +12,7 @@ import { type Inputs, type Outputs } from '../GraphProcessor.js';
 import { type EditorDefinition } from '../EditorDefinition.js';
 import { type InternalProcessContext } from '../../index.js';
 import { coerceType, dedent } from '../../utils/index.js';
-import { MCPProcessManager } from '@ironclad/rivet-app-executor';
+import { MCPBrowserClient } from '@ironclad/rivet-mcp';
 import type { MCPServerConfigWithSecurity, ToolRequest } from '@ironclad/rivet-mcp-shared';
 
 export type MCPNode = ChartNode<'mcp', MCPNodeData>;
@@ -47,12 +47,12 @@ export type MCPNodeData = {
 };
 
 export class MCPNodeImpl extends NodeImpl<MCPNode> {
-  private readonly processManager: MCPProcessManager;
+  private readonly client: MCPBrowserClient;
   private readonly serverId: string;
 
   constructor(node: MCPNode) {
     super(node);
-    this.processManager = new MCPProcessManager();
+    this.client = new MCPBrowserClient();
     this.serverId = `mcp-${node.id}`;
   }
 
@@ -210,7 +210,7 @@ export class MCPNodeImpl extends NodeImpl<MCPNode> {
           };
 
       // Initialize server if not already running
-      await this.processManager.initialize(this.serverId, serverConfig);
+      await this.client.initialize(this.serverId, serverConfig);
 
       // Get tool configuration
       const toolId = this.data.useToolIdInput ? coerceType(inputs['tool' as PortId], 'string') : this.data.toolId;
@@ -229,10 +229,7 @@ export class MCPNodeImpl extends NodeImpl<MCPNode> {
         params: toolParams,
       };
 
-      const result = await this.processManager.executeTool(this.serverId, toolRequest);
-
-      // Get server capabilities
-      const settings = this.processManager.getSecuritySettings(this.serverId);
+      const result = await this.client.executeTool(this.serverId, toolRequest);
 
       const outputs: Outputs = {};
       outputs['output' as PortId] = {
@@ -246,8 +243,8 @@ export class MCPNodeImpl extends NodeImpl<MCPNode> {
       outputs['info' as PortId] = {
         type: 'object',
         value: {
-          requiresPermission: settings.requireToolPermission,
-          isPermitted: settings.isToolExecutionPermitted,
+          requiresPermission: this.data.requireToolPermission,
+          isPermitted: !this.data.requireToolPermission,
         },
       };
 
