@@ -67,10 +67,20 @@ export type DropdownEditorDefinition<T extends ChartNode> = SharedEditorDefiniti
   options: {
     value: string;
     label: string;
+    description?: string;
   }[];
   defaultValue?: string;
 
   useInputToggleDataKey?: DataOfType<T, boolean>;
+
+  // Async options loading
+  loadOptions?: () => Promise<
+    {
+      value: string;
+      label: string;
+      description?: string;
+    }[]
+  >;
 };
 
 export type GraphSelectorEditorDefinition<T extends ChartNode> = SharedEditorDefinitionProps<T> & {

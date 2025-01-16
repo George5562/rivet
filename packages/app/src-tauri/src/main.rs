@@ -7,6 +7,7 @@ use std::path::Path;
 
 use tauri::{AppHandle, CustomMenuItem, InvokeError, Manager, Menu, MenuItem, Submenu};
 mod plugins;
+mod mcp;
 
 fn main() {
     // Fix $PATH on MacOS and Linux to include the bashrc/zshrc
@@ -22,7 +23,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_environment_variable,
             plugins::extract_package_plugin_tarball,
-            allow_data_file_scope
+            allow_data_file_scope,
+            mcp::mcp_load_config
         ])
         .menu(create_menu())
         .on_menu_event(|event| match event.menu_item_id() {

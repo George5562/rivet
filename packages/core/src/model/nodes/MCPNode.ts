@@ -1,3 +1,6 @@
+import { nanoid } from 'nanoid/non-secure';
+import { NodeImpl, type NodeUIData } from '../NodeImpl.js';
+import { nodeDefinition } from '../NodeDefinition.js';
 import {
   type ChartNode,
   type NodeId,
@@ -5,61 +8,156 @@ import {
   type NodeOutputDefinition,
   type PortId,
 } from '../NodeBase.js';
-import { nanoid } from 'nanoid/non-secure';
-import { NodeImpl, type NodeUIData } from '../NodeImpl.js';
-import { nodeDefinition } from '../NodeDefinition.js';
 import { type Inputs, type Outputs } from '../GraphProcessor.js';
-import { type EditorDefinition } from '../EditorDefinition.js';
-import { type InternalProcessContext } from '../../index.js';
+import { type EditorDefinition, type InternalProcessContext } from '../../index.js';
 import { coerceType, dedent } from '../../utils/index.js';
-import { MCPBrowserClient } from '@ironclad/rivet-mcp';
-import type { MCPServerConfigWithSecurity, ToolRequest } from '@ironclad/rivet-mcp-shared';
+import { getError } from '../../utils/errors.js';
+import {
+  MCPError,
+  MCPErrorCode,
+  mapSchemaTypeToRivet,
+  validateInputSchema,
+  type ToolMetadata,
+  type ExtendedToolMetadata,
+  type ToolCache,
+  ToolCacheImpl,
+  type MCPOutputs,
+  type ToolResponse,
+  ErrorHandler,
+  createError,
+} from '@ironclad/rivet-mcp-shared';
+import { type DataType } from '../DataValue.js';
 
+/**
+ * Node for making calls to MCP servers and their tools.
+ * Implements dynamic port generation based on tool metadata.
+ * Integrates with MCPProcessManager for infrastructure monitoring.
+ */
 export type MCPNode = ChartNode<'mcp', MCPNodeData>;
 
-type MCPNodeDataKeys =
-  | 'serverConfig'
-  | 'useServerConfigInput'
-  | 'toolId'
-  | 'useToolIdInput'
-  | 'toolParams'
-  | 'useToolParamsInput'
-  | 'requireToolPermission'
-  | 'errorOnConnectionFailure';
-
+/**
+ * Data structure for the MCP node.
+ * Stores selected server, tool, and tool metadata for port generation.
+ */
 export type MCPNodeData = {
-  // Server Configuration
-  serverConfig: string; // JSON string for server configuration
-  useServerConfigInput?: boolean;
+  /** Selected MCP server from config.json */
+  mcpServer: string;
 
-  // Tool Configuration
-  toolId: string;
-  useToolIdInput?: boolean;
+  /** Selected tool from the server's tool list */
+  toolName: string;
 
-  toolParams: string; // JSON string for tool parameters
-  useToolParamsInput?: boolean;
+  /**
+   * Cached tool metadata used for port generation.
+   * Retrieved from tools/list endpoint and stored here
+   * to avoid repeated server queries.
+   */
+  toolMetadata?: {
+    description: string;
+    inputSchema: {
+      type: 'object';
+      properties: Record<string, unknown>;
+      required?: string[];
+    };
+  };
 
-  // Security Settings
-  requireToolPermission: boolean;
-
-  // Error Handling
-  errorOnConnectionFailure: boolean;
+  /** Last known server status */
+  serverStatus?: {
+    status: 'initializing' | 'connected' | 'error';
+    lastError?: string;
+  };
 };
 
-export class MCPNodeImpl extends NodeImpl<MCPNode> {
-  private readonly client: MCPBrowserClient;
-  private readonly serverId: string;
-
-  constructor(node: MCPNode) {
-    super(node);
-    this.client = new MCPBrowserClient();
-    this.serverId = `mcp-${node.id}`;
+/**
+ * Validates tool metadata structure
+ */
+function validateToolMetadata(metadata: unknown): void {
+  if (!metadata || typeof metadata !== 'object') {
+    throw new MCPError(MCPErrorCode.ValidationError, 'Invalid tool metadata structure');
   }
 
+  const toolMeta = metadata as Partial<ExtendedToolMetadata>;
+
+  if (!toolMeta.name || typeof toolMeta.name !== 'string') {
+    throw new MCPError(MCPErrorCode.ValidationError, 'Tool name is required and must be a string');
+  }
+
+  if (!toolMeta.description || typeof toolMeta.description !== 'string') {
+    throw new MCPError(MCPErrorCode.ValidationError, 'Tool description is required and must be a string');
+  }
+
+  if (!toolMeta.inputSchema) {
+    throw new MCPError(MCPErrorCode.ValidationError, 'Tool input schema is required');
+  }
+
+  validateInputSchema(toolMeta.inputSchema);
+}
+
+/**
+ * Validates tool execution response
+ */
+function validateToolResponse(response: unknown): void {
+  if (!response || typeof response !== 'object') {
+    throw new MCPError(MCPErrorCode.InvalidResponse, 'Invalid tool response structure');
+  }
+
+  const toolResponse = response as {
+    content?: unknown[];
+    isError?: boolean;
+    _meta?: Record<string, unknown>;
+  };
+
+  if (!Array.isArray(toolResponse.content)) {
+    throw new MCPError(MCPErrorCode.InvalidResponse, 'Tool response must include content array');
+  }
+
+  // Validate each content item
+  toolResponse.content.forEach((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new MCPError(MCPErrorCode.InvalidResponse, `Invalid content item at index ${index}`, { index });
+    }
+
+    const contentItem = item as { type?: string; text?: string; data?: string; mimeType?: string };
+
+    if (!contentItem.type) {
+      throw new MCPError(MCPErrorCode.InvalidResponse, `Missing content type at index ${index}`, { index });
+    }
+
+    switch (contentItem.type) {
+      case 'text':
+        if (typeof contentItem.text !== 'string') {
+          throw new MCPError(MCPErrorCode.InvalidResponse, `Invalid text content at index ${index}`, { index });
+        }
+        break;
+      case 'image':
+        if (!contentItem.data || !contentItem.mimeType) {
+          throw new MCPError(MCPErrorCode.InvalidResponse, `Invalid image content at index ${index}`, { index });
+        }
+        break;
+      default:
+        throw new MCPError(
+          MCPErrorCode.InvalidResponse,
+          `Unsupported content type "${contentItem.type}" at index ${index}`,
+          { index, type: contentItem.type },
+        );
+    }
+  });
+}
+
+/**
+ * Implementation of the MCP node.
+ * Handles:
+ * - Two-stage dropdown for server and tool selection
+ * - Dynamic port generation based on tool metadata
+ * - Tool execution via MCP protocol
+ * - Infrastructure monitoring and error recovery
+ */
+export class MCPNodeImpl extends NodeImpl<MCPNode> {
+  private readonly errorHandler = new ErrorHandler();
+
   static create(): MCPNode {
-    return {
+    const chartNode: MCPNode = {
       type: 'mcp',
-      title: 'MCP',
+      title: 'MCP Call',
       id: nanoid() as NodeId,
       visualData: {
         x: 0,
@@ -67,208 +165,336 @@ export class MCPNodeImpl extends NodeImpl<MCPNode> {
         width: 250,
       },
       data: {
-        serverConfig: JSON.stringify(
-          {
-            command: 'npx',
-            args: [],
-            env: {},
-          },
-          null,
-          2,
-        ),
-        toolId: '',
-        toolParams: '{}',
-        requireToolPermission: true,
-        errorOnConnectionFailure: true,
+        mcpServer: '',
+        toolName: '',
       },
     };
+
+    return chartNode;
   }
 
+  /**
+   * Generates input ports based on the selected tool's metadata.
+   * Each property in the tool's inputSchema becomes a port.
+   * Required parameters are marked in the port title.
+   */
   getInputDefinitions(): NodeInputDefinition[] {
     const inputs: NodeInputDefinition[] = [];
 
-    if (this.data.useServerConfigInput) {
-      inputs.push({
-        dataType: 'object',
-        id: 'config' as PortId,
-        title: 'Server Config',
-      });
-    }
+    if (this.data.toolMetadata?.inputSchema) {
+      const { properties, required = [] } = this.data.toolMetadata.inputSchema;
 
-    if (this.data.useToolIdInput) {
-      inputs.push({
-        dataType: 'string',
-        id: 'tool' as PortId,
-        title: 'Tool ID',
-      });
-    }
-
-    if (this.data.useToolParamsInput) {
-      inputs.push({
-        dataType: 'object',
-        id: 'params' as PortId,
-        title: 'Tool Parameters',
+      Object.entries(properties).forEach(([name, schema]) => {
+        inputs.push({
+          dataType: mapSchemaTypeToRivet(schema),
+          id: name as PortId,
+          title: name + (required.includes(name) ? ' (required)' : ' (optional)'),
+          description: (schema as any).description,
+          required: required.includes(name),
+        });
       });
     }
 
     return inputs;
   }
 
+  /**
+   * Defines the node's output ports:
+   * - response: The tool's response content
+   * - metadata: Additional info including error state
+   */
   getOutputDefinitions(): NodeOutputDefinition[] {
     return [
       {
-        dataType: 'object',
-        id: 'output' as PortId,
-        title: 'Result',
-      },
-      {
         dataType: 'string',
-        id: 'state' as PortId,
-        title: 'Status',
+        id: 'response' as PortId,
+        title: 'Response',
+        description: 'The tool execution response content',
       },
       {
         dataType: 'object',
-        id: 'info' as PortId,
-        title: 'Capabilities',
+        id: 'metadata' as PortId,
+        title: 'Metadata',
+        description: 'Additional response data including error state',
       },
     ];
   }
 
+  /**
+   * Configures the node's editor UI with two dropdowns:
+   * 1. MCP Server selection (from config.json)
+   * 2. Tool selection (from tools/list endpoint)
+   */
   getEditors(): EditorDefinition<MCPNode>[] {
-    const editors: EditorDefinition<MCPNode>[] = [
+    return [
       {
-        type: 'code',
-        label: 'Server Configuration',
-        dataKey: 'serverConfig',
-        useInputToggleDataKey: 'useServerConfigInput',
-        language: 'json',
-        helperMessage: 'JSON object with command, args, and optional env',
+        type: 'dropdown',
+        label: 'MCP Server',
+        dataKey: 'mcpServer',
+        options: this.getMCPServerOptions(),
+        helperMessage: 'Select the MCP server to use',
       },
       {
-        type: 'string',
-        label: 'Tool ID',
-        dataKey: 'toolId',
-        useInputToggleDataKey: 'useToolIdInput',
-      },
-      {
-        type: 'code',
-        label: 'Tool Parameters',
-        dataKey: 'toolParams',
-        useInputToggleDataKey: 'useToolParamsInput',
-        language: 'json',
-      },
-      {
-        type: 'toggle',
-        label: 'Require Tool Permission',
-        dataKey: 'requireToolPermission',
-      },
-      {
-        type: 'toggle',
-        label: 'Error on Connection Failure',
-        dataKey: 'errorOnConnectionFailure',
+        type: 'dropdown',
+        label: 'Tool',
+        dataKey: 'toolName',
+        options: this.getToolOptions(),
+        helperMessage: 'Select the tool to call',
       },
     ];
-
-    return editors;
   }
 
+  /**
+   * Gets available MCP servers from config.json.
+   * TODO: Implement actual config loading
+   */
+  private getMCPServerOptions() {
+    return [
+      { label: 'Memory Server', value: 'memory' },
+      { label: 'File Server', value: 'file' },
+    ];
+  }
+
+  /**
+   * Gets available tools for the selected server.
+   * Uses ToolCache to avoid repeated server queries.
+   */
+  private getToolOptions(): { value: string; label: string; description?: string }[] {
+    try {
+      if (!this.data.mcpServer) {
+        return [];
+      }
+
+      const tools = ToolCacheImpl.getInstance().getCachedTools(this.data.mcpServer);
+      if (!tools) {
+        return [];
+      }
+
+      return tools.map((tool: ExtendedToolMetadata) => ({
+        value: tool.name,
+        label: tool.name,
+        description: tool.description,
+      }));
+    } catch (err) {
+      console.error('Error getting tools:', err);
+      return [];
+    }
+  }
+
+  /**
+   * Generates the node's visual body text showing:
+   * - Selected server and tool
+   * - Tool description if available
+   */
   getBody(): string {
     return dedent`
-      ${this.data.useServerConfigInput ? '(Config Using Input)' : 'Server Configured'}
-      Tool: ${this.data.useToolIdInput ? '(Using Input)' : this.data.toolId || 'Not Set'}
-      ${this.data.requireToolPermission ? 'Requires Permission' : 'No Permission Required'}
+      ${this.data.mcpServer ? `Server: ${this.data.mcpServer}` : '(No server selected)'}
+      ${this.data.toolName ? `Tool: ${this.data.toolName}` : '(No tool selected)'}
+      ${this.data.toolMetadata?.description ? `\n${this.data.toolMetadata.description}` : ''}
     `;
   }
 
   static getUIData(): NodeUIData {
     return {
       infoBoxBody: dedent`
-        Connects to and executes tools on Model Context Protocol (MCP) servers.
-        Supports server configuration, tool execution, and permission management.
+        Makes a call to an MCP server using the selected tool.
+        The tool's inputs and outputs are dynamically configured based on its metadata.
       `,
-      infoBoxTitle: 'MCP Node',
-      contextMenuTitle: 'MCP',
-      group: ['AI', 'Integration'],
+      infoBoxTitle: 'MCP Call Node',
+      contextMenuTitle: 'MCP Call',
+      group: ['Integration'],
     };
   }
 
+  /**
+   * Executes the selected tool on the MCP server.
+   */
   async process(inputs: Inputs, context: InternalProcessContext): Promise<Outputs> {
+    const startTime = Date.now();
+    let phase = 'initialization';
+    let lastError: Error | null = null;
+
     try {
-      // Get server configuration
-      const serverConfig: MCPServerConfigWithSecurity = this.data.useServerConfigInput
-        ? {
-            command: '',
-            args: [],
-            ...JSON.parse(coerceType(inputs['config' as PortId], 'string')),
+      // Validate server and tool selection
+      if (!this.data.mcpServer) {
+        throw createError(MCPErrorCode.ValidationError, 'No MCP server selected');
+      }
+
+      if (!this.data.toolName) {
+        throw createError(MCPErrorCode.ValidationError, 'No tool selected');
+      }
+
+      if (!context.mcpClient) {
+        throw createError(MCPErrorCode.ConnectionError, 'MCP client not available');
+      }
+
+      // Load and validate server config
+      phase = 'server-config';
+      const config = await context.mcpClient.loadConfig();
+      const serverConfig = config[this.data.mcpServer];
+      if (!serverConfig) {
+        throw createError(MCPErrorCode.ValidationError, `Server "${this.data.mcpServer}" not found in config`, {
+          serverId: this.data.mcpServer,
+        });
+      }
+
+      // Check server health and status
+      phase = 'health-check';
+      const serverStatus = await context.mcpClient.getServerInfo(this.data.mcpServer);
+      this.data.serverStatus = {
+        status: serverStatus.status as 'initializing' | 'connected' | 'error',
+        lastError: serverStatus.lastError,
+      };
+
+      if (this.data.serverStatus.status === 'error') {
+        throw createError(
+          MCPErrorCode.ConnectionError,
+          `Server is in error state: ${this.data.serverStatus.lastError}`,
+        );
+      }
+
+      // Initialize server with retry and capability check
+      phase = 'server-init';
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          await context.mcpClient.initialize(this.data.mcpServer, serverConfig);
+          break;
+        } catch (err) {
+          lastError = err as Error;
+          retryCount++;
+
+          if (!this.errorHandler.shouldRetry(err, retryCount)) {
+            throw err;
           }
-        : {
-            ...JSON.parse(this.data.serverConfig),
-            security: {
-              requireToolPermission: this.data.requireToolPermission,
-              isToolExecutionPermitted: !this.data.requireToolPermission,
+
+          const delay = this.errorHandler.getRetryDelay(err, retryCount);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
+      // Validate and prepare arguments
+      phase = 'argument-preparation';
+      const toolArgs: Record<string, unknown> = {};
+      const schema = this.data.toolMetadata?.inputSchema;
+
+      if (!schema) {
+        throw createError(MCPErrorCode.ValidationError, 'Tool metadata not available');
+      }
+
+      validateInputSchema(schema);
+
+      Object.entries(schema.properties).forEach(([name, propSchema]) => {
+        const input = inputs[name as PortId];
+        if (input) {
+          try {
+            toolArgs[name] = coerceType(input, mapSchemaTypeToRivet(propSchema));
+          } catch (err: unknown) {
+            throw createError(MCPErrorCode.ValidationError, `Invalid type for parameter "${name}"`, {
+              parameter: name,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        } else if (schema.required?.includes(name)) {
+          throw createError(MCPErrorCode.ValidationError, `Missing required parameter "${name}"`, { parameter: name });
+        }
+      });
+
+      // Execute tool with retry
+      phase = 'tool-execution';
+      retryCount = 0;
+
+      while (retryCount < maxRetries) {
+        try {
+          const response = (await context.mcpClient.executeTool(this.data.mcpServer, {
+            toolId: this.data.toolName,
+            params: toolArgs,
+          })) as ToolResponse;
+
+          if (!response) {
+            throw createError(MCPErrorCode.InvalidResponse, 'No response from MCP server');
+          }
+
+          validateToolResponse(response);
+
+          return {
+            ['response' as PortId]: {
+              type: 'string',
+              value: response.content[0]?.text ?? '',
+            },
+            ['metadata' as PortId]: {
+              type: 'object',
+              value: {
+                executionTime: Date.now() - startTime,
+                phase,
+                retryCount,
+                serverStatus: {
+                  status: 'connected',
+                },
+                ...(response.isError && {
+                  error: {
+                    code: MCPErrorCode.ToolExecutionError,
+                    message: this.errorHandler.formatErrorMessage(response),
+                    data: response._meta,
+                  },
+                }),
+              },
             },
           };
+        } catch (err) {
+          lastError = err as Error;
+          retryCount++;
 
-      // Initialize server if not already running
-      await this.client.initialize(this.serverId, serverConfig);
+          if (!this.errorHandler.shouldRetry(err, retryCount)) {
+            throw err;
+          }
 
-      // Get tool configuration
-      const toolId = this.data.useToolIdInput ? coerceType(inputs['tool' as PortId], 'string') : this.data.toolId;
-
-      let toolParams: Record<string, any> = {};
-
-      if (this.data.useToolParamsInput) {
-        toolParams = coerceType(inputs['params' as PortId], 'object');
-      } else if (this.data.toolParams) {
-        toolParams = JSON.parse(this.data.toolParams);
+          const delay = this.errorHandler.getRetryDelay(err, retryCount);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
       }
 
-      // Execute tool
-      const toolRequest: ToolRequest = {
-        toolId,
-        params: toolParams,
-      };
+      throw createError(MCPErrorCode.ToolExecutionError, 'Tool execution failed after retries', {}, lastError);
+    } catch (err: unknown) {
+      const error =
+        err instanceof MCPError
+          ? err
+          : createError(MCPErrorCode.InternalError, err instanceof Error ? err.message : 'Unknown error', {
+              originalError: err,
+            });
 
-      const result = await this.client.executeTool(this.serverId, toolRequest);
+      // Update server status on error
+      if (error.code === MCPErrorCode.ConnectionError || error.code === MCPErrorCode.InternalError) {
+        this.data.serverStatus = {
+          status: 'error',
+          lastError: this.errorHandler.formatErrorMessage(error),
+        };
+      }
 
-      const outputs: Outputs = {};
-      outputs['output' as PortId] = {
-        type: 'object',
-        value: result,
-      };
-      outputs['state' as PortId] = {
-        type: 'string',
-        value: 'success',
-      };
-      outputs['info' as PortId] = {
-        type: 'object',
-        value: {
-          requiresPermission: this.data.requireToolPermission,
-          isPermitted: !this.data.requireToolPermission,
+      return {
+        ['response' as PortId]: {
+          type: 'string',
+          value: '',
+        },
+        ['metadata' as PortId]: {
+          type: 'object',
+          value: {
+            executionTime: Date.now() - startTime,
+            phase,
+            error: {
+              code: error.code,
+              message: this.errorHandler.formatErrorMessage(error),
+              data: error.data,
+            },
+            serverStatus: this.data.serverStatus,
+            retryCount: 0,
+          },
         },
       };
-
-      return outputs;
-    } catch (err) {
-      if (!this.data.errorOnConnectionFailure) {
-        const outputs: Outputs = {};
-        outputs['state' as PortId] = {
-          type: 'string',
-          value: 'error',
-        };
-        outputs['output' as PortId] = {
-          type: 'object',
-          value: {} as Record<string, unknown>,
-        };
-        outputs['info' as PortId] = {
-          type: 'object',
-          value: {},
-        };
-        return outputs;
-      }
-      throw err;
     }
   }
 }
 
-export const mcpNode = nodeDefinition(MCPNodeImpl, 'MCP');
+export const mcpNode = nodeDefinition(MCPNodeImpl, 'MCP Call');

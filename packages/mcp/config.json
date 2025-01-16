@@ -2,12 +2,19 @@
   "mcpServers": {
     "brave-search": {
       "id": "brave-search",
-      "name": "Brave Search MCP",
-      "description": "Local Brave Search MCP server",
+      "name": "Brave Search",
+      "description": "Web and local search capabilities via Brave Search API",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-brave-search"],
       "env": {
         "BRAVE_API_KEY": "BSAOM15URP3NRp1jBKlT-F0eYOdC1Qp"
+      },
+      "status": {
+        "installed": false,
+        "lastInstalled": null,
+        "running": false,
+        "lastStarted": null,
+        "endpoint": "http://localhost:3000"
       }
     },
     "memory": {
@@ -16,7 +23,14 @@
       "description": "Local Memory MCP server for testing",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "env": {}
+      "env": {},
+      "status": {
+        "installed": false,
+        "lastInstalled": null,
+        "running": false,
+        "lastStarted": null,
+        "endpoint": "http://localhost:3001"
+      }
     }
   }
 }

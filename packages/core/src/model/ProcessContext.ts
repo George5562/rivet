@@ -15,6 +15,13 @@ import {
   type AudioProvider,
 } from '../index.js';
 import type { Tokenizer } from '../integrations/Tokenizer.js';
+import type { MCPBrowserClient } from '@ironclad/rivet-mcp/src/browser/MCPBrowserClient.js';
+import type { GraphExecutor } from './GraphExecutor.js';
+import type { GraphEvent } from './GraphEvents.js';
+import type { NodeEvent } from './NodeEvents.js';
+import type { Project } from './Project.js';
+import type { DataValue } from './DataValue.js';
+import type { ChartNode } from './NodeBase.js';
 
 export type ProcessContext = {
   settings: Settings;
@@ -37,6 +44,9 @@ export type ProcessContext = {
     configuredEndpoint: string,
     configuredModel: string,
   ) => ChatNodeEndpointInfo | Promise<ChatNodeEndpointInfo>;
+
+  /** Gets a string plugin config value from the settings, falling back to a specified environment variable if set. */
+  getPluginConfig(name: string): string | undefined;
 };
 
 export type ChatNodeEndpointInfo = {
@@ -46,68 +56,29 @@ export type ChatNodeEndpointInfo = {
 
 export type ProcessId = Opaque<string, 'ProcessId'>;
 
-export type InternalProcessContext<T extends ChartNode = ChartNode> = ProcessContext & {
-  /** The executor that is running the current processor. */
-  executor: 'nodejs' | 'browser';
-
-  /** The project being executed. */
+export interface InternalProcessContext extends ProcessContext {
+  executor: GraphExecutor;
   project: Project;
-
-  /** A signal that can be used when abort() is called on the GraphProcessor to abort the node's execution. */
   signal: AbortSignal;
-
-  /** A unique ID for this specific execution of the node. */
-  processId: ProcessId;
-
-  /** Context values that are accessible on graphs and all subgraphs. */
+  processId: string;
   contextValues: Record<string, DataValue>;
-
-  /** Inputs that were passed to the curent graph. Used for GraphInputNode. */
   graphInputs: Record<string, DataValue>;
-
-  /** Outputs from the graph. A GraphOutputNode will set these. */
   graphOutputs: Record<string, DataValue>;
-
-  /** The tokenizer to use to tokenize all strings.s */
   tokenizer: Tokenizer;
+  node?: ChartNode;
+  attachedData?: Record<string, unknown>;
+  mcpClient?: MCPBrowserClient;
+  onProgress?: (progress: { type: 'info' | 'warning' | 'error' | 'success'; message: string }) => void;
 
-  /** The current node being executed. */
-  node: T;
+  // Event handling
+  onGraphEvent: (event: GraphEvent) => void;
+  onNodeEvent: (event: NodeEvent) => void;
 
-  /** For internal and advanced cases, gets the arbitrary data attached to the node during graph execution. */
-  attachedData: AttachedNodeData;
+  // Global variable management
+  getGlobalVariable: (name: string) => Promise<DataValue | undefined>;
+  setGlobalVariable: (name: string, value: DataValue) => Promise<void>;
 
-  /** Raises a user event that can be listened for on the GraphProcessor. */
-  raiseEvent: (eventName: string, data: DataValue | undefined) => void;
-
-  waitEvent: (eventName: string) => Promise<DataValue | undefined>;
-
-  /** External functions that have been defined on the GraphProcessor (or its parent). */
-  externalFunctions: Record<string, ExternalFunction>;
-
-  /** Global cache shared by all nodes, is present for the entire execution of a graph (and shared in subgraphs). */
-  executionCache: Map<string, unknown>;
-
-  /** Call when the node has partial data but has not finished execution yet. */
-  onPartialOutputs?: (outputs: Outputs) => void;
-
-  /** Creates a subprocessor, for executing subgraphs. */
-  createSubProcessor: (subGraphId: GraphId | undefined, options?: { signal?: AbortSignal }) => GraphProcessor;
-
-  /** Like context, but variables that are set during the run of the graph and can be read during the graph. Shared among all graphs and subgraphs. */
-  getGlobal: (id: string) => ScalarOrArrayDataValue | undefined;
-
-  /** Like context, but variables that are set during the run of the graph and can be read during the graph. Shared among all graphs and subgraphs. */
-  setGlobal: (id: string, value: ScalarOrArrayDataValue) => void;
-
-  waitForGlobal: (id: string) => Promise<ScalarOrArrayDataValue>;
-
-  /** Logs to GraphProcessor's trace event. */
-  trace: (message: string) => void;
-
-  /** Aborts the current graph, if there is an error, the graph is error aborted, and if undefined, then it is simply early-exited. */
-  abortGraph: (error?: Error | string) => void;
-
-  /** Gets a string plugin config value from the settings, falling back to a specified environment variable if set. */
-  getPluginConfig(name: string): string | undefined;
-};
+  // Graph execution control
+  runGraph: (graphId: string, inputs?: Record<string, DataValue>) => Promise<Record<string, DataValue>>;
+  abortGraph: (graphId: string) => void;
+}

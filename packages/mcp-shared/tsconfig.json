@@ -6,10 +6,15 @@
     "outDir": "dist/esm",
     "rootDir": "src",
     "declarationDir": "dist/types",
-    "allowSyntheticDefaultImports": false,
-    "esModuleInterop": false
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "types": ["node"],
+    "paths": {
+      "@ironclad/rivet-core": ["../core/src"]
+    }
   },
   "include": ["src"],
+  "references": [{ "path": "../core" }],
   "ts-node": {
     "swc": true,
     "experimentalResolver": true,

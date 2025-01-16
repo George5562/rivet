@@ -2,154 +2,83 @@
 
 ## Overview
 
-The MCP (Multi-Context Protocol) Node enables secure communication between browser and Node.js contexts in Rivet. The implementation is split across three packages to maintain clear separation of concerns:
-
-- `core`: Core node definition and registration
-- `mcp`: Browser-side implementation
-- `app-executor`: Node.js-side implementation and process management
-- `mcp-shared`: Shared types and security module
-
-## Development
-
-### Build Commands
-
-Two main build commands are available:
-
-```bash
-# For development - builds packages sequentially for better error tracking
-yarn build:dev
-
-# For production/CI - builds all packages in parallel respecting dependencies
-yarn build:all
-```
-
-### Running the Stack
-
-1. Build the packages:
-
-```bash
-yarn build:dev
-```
-
-2. Start the Node.js executor:
-
-```bash
-yarn workspace @ironclad/rivet-app-executor dev
-```
-
-3. Start the Rivet UI (in a separate terminal):
-
-```bash
-yarn workspace @ironclad/rivet-app dev
-```
-
-4. For development with auto-rebuild:
-
-```bash
-yarn workspace @ironclad/rivet-app-executor watch
-```
-
-## Package Organization
-
-### Core (`core/src/model/nodes`)
-
-Contains the core node definition:
-
-- `MCPNode`: Core type definitions and node registration
-- Imports implementation from `app-executor` package
-
-### Browser-Side (`mcp`)
-
-Contains components that run in the browser context:
-
-- `MCPNode`: Browser-side node implementation that handles:
-  - Node configuration and validation
-  - Data flow management
-  - Integration with core Rivet functionality
-- `MCPBrowserClient`: Browser-side client that manages:
-  - Tauri-based server communication
-  - Event handling and message passing
-  - Security validation of requests/responses
-
-### Node.js-Side (`app-executor`)
-
-Contains components that run in the Node.js context:
-
-- `MCPProcessManager`: Process management and server communication
-- Handles child process spawning and IPC
-- Node.js-specific type extensions
-- Exports via package entry point (`src/index.ts`)
-
-### Shared (`mcp-shared`)
-
-Contains shared types and security module used by all packages:
-
-- Common type definitions (`types.ts`)
-- Security management (`security/SecurityManager.ts`)
-- Protocol error handling and codes
-
-## Type System
-
-The type system is organized to prevent duplication:
-
-1. Core node types: Defined in `core/src/model/nodes/MCPNode.ts`
-2. Protocol types: Defined in `mcp-shared/src/types.ts`
-3. Node.js types: Defined in `app-executor/src/mcp/types.ts`
+The Model Context Protocol (MCP) Node enables interaction with MCP-compliant servers, providing access to external AI capabilities, tools, and resources through a standardized protocol.
 
 ## Architecture
 
-The MCP implementation follows a client-server architecture:
+The MCP implementation is split across several packages:
 
-1. Core package defines the node interface
-2. Browser-side components in `mcp` package implement the interface
-3. Node.js-side in `app-executor` handles process management
-4. All packages share common types and security from `mcp-shared`
+- `core`: Core node implementation and processing logic
+- `mcp`: Server management and protocol handling
+- `app-executor`: Tool execution and resource management
+- `mcp-shared`: Shared utilities, types, and error handling
+
+## Features
+
+- Dynamic tool discovery and port generation
+- Infrastructure monitoring and health checks
+- Comprehensive error handling with recovery strategies
+- Two-level caching system (package and API)
+- Resource management with dependency tracking
+- State machine for server lifecycle management
+
+## Resource Management
+
+The system uses a dependency-aware resource management approach:
+
+- Resource tracking with dependency graphs
+- Ordered cleanup based on dependencies
+- Cleanup verification with detailed reporting
+- Event-based monitoring
+- Automatic resource cleanup on errors
+
+## State Management
+
+Server lifecycle is managed through a state machine:
+
+- Validated state transitions
+- State persistence with metadata
+- Automatic recovery mechanisms
+- Event-based monitoring
+- Integration with error handling
+
+States and transitions:
+
+```
+not_installed -> installing -> installed -> starting -> initializing -> connected
+                                                                    -> stopping -> stopped
+                                                                    -> error -> [recovery]
+```
+
+## Error Handling
+
+The system uses a categorized error handling approach:
+
+- Protocol errors: JSON-RPC and MCP protocol issues
+- Tool errors: Execution and validation failures
+- Infrastructure errors: Connection and resource issues
+- Security errors: Access and capability problems
+
+Each category has specific recovery strategies:
+
+- Configurable retry attempts
+- Exponential/linear backoff
+- Resource cleanup on failure
+- Detailed error reporting
 
 ## Configuration
 
-MCP servers are configured through `config.json` in the project root. This is the authoritative source for MCP configurations.
+Server configuration is managed through `config.json`:
 
-## Dependency Diagram
-
-```mermaid
-graph TD
-    core[core]
-    mcp[mcp]
-    app_executor[app-executor]
-    mcp_shared[mcp-shared]
-
-    %% Core dependencies
-    core --> app_executor
-    core --> mcp_shared
-
-    %% Browser-side dependencies
-    mcp --> core
-    mcp --> mcp_shared
-
-    %% Node.js-side dependencies
-    app_executor --> mcp_shared
-
-    %% Package purposes
-    core[core<br/>Node definition & registration]
-    mcp[mcp<br/>Browser implementation]
-    app_executor[app-executor<br/>Node.js process management]
-    mcp_shared[mcp-shared<br/>Shared types & security]
+```json
+{
+  "mcpServers": {
+    "serverId": {
+      "name": "Server Name",
+      "command": "npx start-server",
+      "status": "installed",
+      "capabilities": ["tool1", "tool2"]
+    }
+  }
+}
 ```
-
-### Key Dependencies
-
-- `core` depends on:
-
-  - `app-executor` for process management
-  - `mcp-shared` for types and security
-
-- `mcp` depends on:
-
-  - `core` for node definition
-  - `mcp-shared` for types and security
-
-- `app-executor` depends on:
-
-  - `mcp-shared` for types and security
-
-- `mcp-shared` has no dependencies on other MCP packages

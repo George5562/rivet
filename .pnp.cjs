@@ -81,6 +81,7 @@ const RAW_RUNTIME_STATE =
           ["@octokit/rest", "npm:20.0.2"],\
           ["@swc/core", "virtual:74fcc7b6256f60a89945acc6b1c62e6158616c0dcf2312663cfe08ceda598b7d943e5de97f39a415e4491198cfa92535d8e40310ec84839b8241ca342059e353#npm:1.3.94"],\
           ["@types/eslint", "npm:8.44.6"],\
+          ["@types/lru-cache", "npm:7.10.10"],\
           ["@types/node", "npm:20.8.10"],\
           ["@types/yargs", "npm:17.0.29"],\
           ["@typescript-eslint/eslint-plugin", "virtual:36b10b38a2f3e49d8cd162fbeda8e49e065ae2d0ebbbd25b0a3339d0203e0ec0394d852d27989cf9f4297d5cf181367ebbc4ea51690fe53337f9c0c2783178a4#npm:6.9.0"],\
@@ -97,6 +98,7 @@ const RAW_RUNTIME_STATE =
           ["eslint-plugin-n", "virtual:74fcc7b6256f60a89945acc6b1c62e6158616c0dcf2312663cfe08ceda598b7d943e5de97f39a415e4491198cfa92535d8e40310ec84839b8241ca342059e353#npm:16.2.0"],\
           ["eslint-plugin-promise", "virtual:74fcc7b6256f60a89945acc6b1c62e6158616c0dcf2312663cfe08ceda598b7d943e5de97f39a415e4491198cfa92535d8e40310ec84839b8241ca342059e353#npm:6.1.1"],\
           ["eslint-plugin-react-hooks", "virtual:4a4dfdd9a7df5ec5e275841a43fbecdb97f28d7f31447ab74c1dd2a4d56fe264664aa1dc4ad44cc92e46e533864e6b71f8d1474657f30ffd4d572a69c55bcf0b#npm:4.6.0"],\
+          ["lru-cache", "npm:11.0.2"],\
           ["prettier", "npm:3.2.5"],\
           ["rollup", "npm:4.17.2"],\
           ["ts-node", "virtual:74fcc7b6256f60a89945acc6b1c62e6158616c0dcf2312663cfe08ceda598b7d943e5de97f39a415e4491198cfa92535d8e40310ec84839b8241ca342059e353#npm:10.9.1"],\
@@ -6540,6 +6542,7 @@ const RAW_RUNTIME_STATE =
           ["@octokit/rest", "npm:20.0.2"],\
           ["@swc/core", "virtual:74fcc7b6256f60a89945acc6b1c62e6158616c0dcf2312663cfe08ceda598b7d943e5de97f39a415e4491198cfa92535d8e40310ec84839b8241ca342059e353#npm:1.3.94"],\
           ["@types/eslint", "npm:8.44.6"],\
+          ["@types/lru-cache", "npm:7.10.10"],\
           ["@types/node", "npm:20.8.10"],\
           ["@types/yargs", "npm:17.0.29"],\
           ["@typescript-eslint/eslint-plugin", "virtual:36b10b38a2f3e49d8cd162fbeda8e49e065ae2d0ebbbd25b0a3339d0203e0ec0394d852d27989cf9f4297d5cf181367ebbc4ea51690fe53337f9c0c2783178a4#npm:6.9.0"],\
@@ -6556,6 +6559,7 @@ const RAW_RUNTIME_STATE =
           ["eslint-plugin-n", "virtual:74fcc7b6256f60a89945acc6b1c62e6158616c0dcf2312663cfe08ceda598b7d943e5de97f39a415e4491198cfa92535d8e40310ec84839b8241ca342059e353#npm:16.2.0"],\
           ["eslint-plugin-promise", "virtual:74fcc7b6256f60a89945acc6b1c62e6158616c0dcf2312663cfe08ceda598b7d943e5de97f39a415e4491198cfa92535d8e40310ec84839b8241ca342059e353#npm:6.1.1"],\
           ["eslint-plugin-react-hooks", "virtual:4a4dfdd9a7df5ec5e275841a43fbecdb97f28d7f31447ab74c1dd2a4d56fe264664aa1dc4ad44cc92e46e533864e6b71f8d1474657f30ffd4d572a69c55bcf0b#npm:4.6.0"],\
+          ["lru-cache", "npm:11.0.2"],\
           ["prettier", "npm:3.2.5"],\
           ["rollup", "npm:4.17.2"],\
           ["ts-node", "virtual:74fcc7b6256f60a89945acc6b1c62e6158616c0dcf2312663cfe08ceda598b7d943e5de97f39a415e4491198cfa92535d8e40310ec84839b8241ca342059e353#npm:10.9.1"],\
@@ -9379,6 +9383,16 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@types/lodash-es", "npm:4.17.10"],\
           ["@types/lodash", "npm:4.14.200"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["@types/lru-cache", [\
+      ["npm:7.10.10", {\
+        "packageLocation": "./.yarn/cache/@types-lru-cache-npm-7.10.10-6cd50935b4-bf0c9a99b3.zip/node_modules/@types/lru-cache/",\
+        "packageDependencies": [\
+          ["@types/lru-cache", "npm:7.10.10"],\
+          ["lru-cache", "npm:11.0.2"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -19259,6 +19273,13 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/lru-cache-npm-11.0.0-92d560d9d6-41f36fbff8.zip/node_modules/lru-cache/",\
         "packageDependencies": [\
           ["lru-cache", "npm:11.0.0"]\
+        ],\
+        "linkType": "HARD"\
+      }],\
+      ["npm:11.0.2", {\
+        "packageLocation": "./.yarn/cache/lru-cache-npm-11.0.2-72e1eedbe6-25fcb66e9d.zip/node_modules/lru-cache/",\
+        "packageDependencies": [\
+          ["lru-cache", "npm:11.0.2"]\
         ],\
         "linkType": "HARD"\
       }],\

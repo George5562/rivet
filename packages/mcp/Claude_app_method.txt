@@ -1,0 +1,108 @@
+The Claude desktop app identifies the tools available for each MCP server dynamically by querying the server after it is initialized. This allows the app to list available tools without requiring manual addition to the configuration file during installation. Here's how the process works in detail:
+
+1. Dynamic Tool Discovery
+	•	Each MCP server implements a standard JSON-RPC 2.0 endpoint for tool discovery
+	•	When the Claude desktop app starts, it initializes the MCP servers as defined in the configuration file
+	•	After initialization, the app queries the server using the tools/list method. For example:
+
+Request:
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "cursor": "optional-cursor-value"  // For pagination support
+  }
+}
+
+The server responds with detailed tool metadata:
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "tool-name",
+        "description": "Human readable description of the tool",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            // Tool-specific input parameters with types and descriptions
+          },
+          "required": ["required_param_names"]
+        }
+      }
+    ],
+    "nextCursor": "next-page-cursor"  // For pagination
+  }
+}
+
+2. Tool Invocation
+	•	Tools are invoked using the tools/call method
+	•	The request includes the tool name and arguments matching the inputSchema:
+
+Request:
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "tool-name",
+    "arguments": {
+      // Arguments matching inputSchema
+    }
+  }
+}
+
+Response:
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Tool execution result"
+      }
+    ],
+    "isError": false
+  }
+}
+
+3. Server-Tool Communication Example
+	•	The server implements these JSON-RPC methods to expose its tools and handle invocations
+	•	Tool metadata includes:
+		- Name and description
+		- Input schema with parameter types and descriptions
+		- Required vs optional parameters clearly marked
+		- Structured response format
+
+4. Response Content Types
+	•	Tools can return multiple types of content:
+		- Text content with optional annotations
+		- Image content (base64 encoded with MIME type)
+		- Embedded resources (with URI and MIME type)
+	•	Each response includes an isError flag to indicate success/failure
+	•	Responses can include metadata for client use
+
+5. Error Handling
+	•	Tool errors are reported in the result object with isError=true
+	•	Protocol-level errors use standard JSON-RPC error responses
+	•	Infrastructure errors (finding tool, server support) use MCP error codes
+	•	Errors include:
+		- Tool-specific errors in result
+		- JSON-RPC protocol errors
+		- MCP protocol errors
+
+6. Implementation Requirements
+	•	Implement JSON-RPC 2.0 protocol handlers
+	•	Support pagination for tool lists
+	•	Handle all content types in responses
+	•	Implement proper error handling at all levels
+	•	Cache tool metadata for efficiency
+	•	Validate inputs against schemas
+	•	Support server capability detection
+
+Summary
+The MCP protocol provides a comprehensive framework for tool discovery and invocation, with rich metadata, content type support, and structured error handling. The protocol is designed to be extensible while maintaining strict validation and type safety.
+

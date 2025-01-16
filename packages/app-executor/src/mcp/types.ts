@@ -27,6 +27,8 @@ export interface ServerState {
   status: 'initializing' | 'connected' | 'error';
   /** Request counter */
   requestId: number;
+  /** Last error message if any */
+  lastError?: string;
   /** Pending request callbacks */
   pendingRequests: Map<
     number,

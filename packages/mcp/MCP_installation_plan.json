@@ -1,0 +1,262 @@
+{
+  "plan_version": "1.1",
+  "last_updated": "2024-03-20",
+  "steps": {
+    "1_configuration_management": {
+      "description": "Update configuration structure and management",
+      "status": "done",
+      "substeps": {
+        "1_1_modify_config": {
+          "description": "Modify config.json to focus on server definitions only",
+          "status": "done",
+          "details": [
+            "Remove tools section from mcpServers",
+            "Add installation status tracking",
+            "Add server status fields",
+            "Add API endpoint configuration"
+          ]
+        },
+        "1_2_cache_structure": {
+          "description": "Implement caching system for discovered tools",
+          "status": "done",
+          "details": [
+            "Define tool response cache structure",
+            "Cache tool definitions after discovery",
+            "Implement cache invalidation",
+            "Handle server version changes"
+          ]
+        }
+      }
+    },
+    "2_server_management": {
+      "description": "Enhance MCPProcessManager capabilities",
+      "status": "done",
+      "substeps": {
+        "2_1_lifecycle": {
+          "description": "Implement server lifecycle management",
+          "status": "done",
+          "details": [
+            "Single instance per MCP type",
+            "Start/stop functionality",
+            "Health check system",
+            "Auto-restart capability"
+          ]
+        },
+        "2_2_tool_discovery": {
+          "description": "Implement standardized tool discovery",
+          "status": "done",
+          "details": [
+            "Implement /tools endpoint communication",
+            "Parse tool list response",
+            "Handle tool metadata",
+            "Validate tool compatibility"
+          ]
+        },
+        "2_3_api_integration": {
+          "description": "Implement standard API communication",
+          "status": "done",
+          "details": [
+            "Standardize API request format",
+            "Handle tool invocation",
+            "Implement response parsing",
+            "Add error handling"
+          ]
+        }
+      }
+    },
+    "3_ui_implementation": {
+      "description": "Implement UI components and flow",
+      "status": "in_progress",
+      "substeps": {
+        "3_1_dropdowns": {
+          "description": "Implement two-stage dropdown system",
+          "status": "in_progress",
+          "details": [
+            "✓ Basic dropdown structure implemented",
+            "✓ Server and tool selection dropdowns added",
+            "✓ Tool descriptions displayed in UI",
+            "TODO: Load actual servers from config.json",
+            "TODO: Fix ToolCache integration"
+          ]
+        },
+        "3_2_node_ports": {
+          "description": "Implement dynamic port generation",
+          "status": "in_progress",
+          "details": [
+            "✓ Dynamic input port generation from schema",
+            "✓ Required vs optional port marking",
+            "✓ Port descriptions from tool metadata",
+            "✓ Basic output ports defined",
+            "TODO: Fix type mapping system",
+            "TODO: Add support for array types",
+            "TODO: Add support for complex object types"
+          ]
+        },
+        "3_3_node_data": {
+          "description": "Implement node data structure",
+          "status": "in_progress",
+          "details": [
+            "✓ Basic node data structure defined",
+            "✓ Tool metadata caching structure",
+            "TODO: Implement server config loading",
+            "TODO: Add tool metadata refresh mechanism",
+            "TODO: Add error state handling"
+          ]
+        },
+        "3_4_node_processing": {
+          "description": "Implement node processing",
+          "status": "todo",
+          "details": [
+            "✓ Basic process flow implemented",
+            "✓ Argument validation and preparation",
+            "TODO: Fix mcpClient integration",
+            "TODO: Add proper error handling",
+            "TODO: Add retry mechanism",
+            "TODO: Add progress reporting"
+          ]
+        }
+      }
+    },
+    "4_error_handling": {
+      "description": "Implement comprehensive error handling",
+      "status": "todo",
+      "substeps": {
+        "4_1_protocol_errors": {
+          "description": "Handle protocol-level errors",
+          "status": "todo",
+          "details": [
+            "JSON-RPC protocol errors",
+            "MCP protocol errors",
+            "Server capability errors",
+            "Tool discovery errors"
+          ]
+        },
+        "4_2_tool_errors": {
+          "description": "Handle tool-specific errors",
+          "status": "todo",
+          "details": [
+            "Tool execution errors in result object",
+            "Input validation errors",
+            "Response parsing errors",
+            "Content type handling errors"
+          ]
+        },
+        "4_3_infrastructure_errors": {
+          "description": "Handle infrastructure errors",
+          "status": "todo",
+          "details": [
+            "Server connection errors",
+            "Tool discovery failures",
+            "Capability detection errors",
+            "Cache invalidation errors"
+          ]
+        }
+      }
+    },
+    "5_process_flow": {
+      "description": "Implement core process flow",
+      "status": "todo",
+      "substeps": {
+        "5_1_installation": {
+          "description": "Implement MCP installation flow",
+          "status": "todo",
+          "details": [
+            "npx command execution",
+            "Installation verification",
+            "Initial API communication",
+            "Tool discovery initiation"
+          ]
+        },
+        "5_2_port_configuration": {
+          "description": "Implement dynamic port configuration",
+          "status": "todo",
+          "details": ["Parse tool API specifications", "Dynamic port creation", "Type validation", "State persistence"]
+        }
+      }
+    },
+    "6_caching": {
+      "description": "Implement caching system",
+      "status": "todo",
+      "substeps": {
+        "6_1_package_caching": {
+          "description": "Implement package caching",
+          "status": "todo",
+          "details": [
+            "Local cache directory setup",
+            "Cache cleanup mechanism",
+            "Version management",
+            "Space management"
+          ]
+        },
+        "6_2_api_caching": {
+          "description": "Implement API response caching",
+          "status": "todo",
+          "details": [
+            "Cache tool discovery responses",
+            "Tool metadata caching",
+            "Version-aware caching",
+            "Cache invalidation rules"
+          ]
+        }
+      }
+    },
+    "7_bug_fixes": {
+      "description": "Fix identified issues",
+      "status": "in_progress",
+      "substeps": {
+        "7_1_shared_utils": {
+          "description": "Create shared utility functions",
+          "status": "done",
+          "details": [
+            "Move validateInputSchema to mcp-shared ✓",
+            "Move mapSchemaTypeToRivet to mcp-shared ✓",
+            "Add proper type definitions ✓",
+            "Add comprehensive tests ✓"
+          ]
+        },
+        "7_2_type_system": {
+          "description": "Fix type system inconsistencies",
+          "status": "done",
+          "details": [
+            "Update MCPOutputs interface ✓",
+            "Align with core types ✓",
+            "Add type guards ✓",
+            "Update type documentation ✓"
+          ]
+        },
+        "7_3_error_handling": {
+          "description": "Consolidate error handling",
+          "status": "done",
+          "details": [
+            "Create centralized error utilities ✓",
+            "Standardize error codes ✓",
+            "Improve error messages ✓",
+            "Add error recovery strategies ✓"
+          ]
+        },
+        "7_4_resource_mgmt": {
+          "description": "Improve resource management",
+          "status": "done",
+          "details": [
+            "Implement synchronized cleanup ✓",
+            "Add resource tracking with dependencies ✓",
+            "Improve cleanup order with dependency graph ✓",
+            "Add cleanup verification with detailed reporting ✓",
+            "Integrate with MCPNode and app-executor ✓"
+          ]
+        },
+        "7_5_state_machine": {
+          "description": "Implement server state machine",
+          "status": "done",
+          "details": [
+            "Define state transitions with validation ✓",
+            "Add state persistence with metadata ✓",
+            "Implement recovery mechanisms ✓",
+            "Add event-based state monitoring ✓",
+            "Integrate with error handling system ✓"
+          ]
+        }
+      }
+    }
+  }
+}

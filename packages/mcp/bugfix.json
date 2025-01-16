@@ -1,0 +1,326 @@
+{
+  "version": "1.0",
+  "last_updated": "2024-03-20",
+  "bugs": {
+    "1_module_imports": {
+      "description": "Inconsistent and problematic module imports across MCP files",
+      "affected_files": [
+        "packages/mcp-shared/src/state/ServerStateMachine.ts",
+        "packages/mcp/src/browser/ResourceManager.ts"
+      ],
+      "issues": [
+        "Inconsistent EventEmitter imports ('node:events' vs 'events')",
+        "Missing or incorrect module resolution for Node.js built-ins",
+        "Need to standardize on 'node:events' for Node.js built-ins"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "2_workspace_dependencies": {
+      "description": "Workspace dependency configuration issues",
+      "affected_files": ["packages/mcp/src/browser/MCPNode.ts", "packages/mcp-shared/package.json"],
+      "issues": [
+        "@ironclad/rivet-core import resolution",
+        "@ironclad/rivet-mcp-shared package references",
+        "Workspace protocol configuration needed"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "3_external_dependencies": {
+      "description": "External dependency management",
+      "affected_files": ["packages/mcp/package.json"],
+      "issues": [
+        "nanoid dependency configuration",
+        "@tauri-apps/api dependency configuration",
+        "Need to verify all external deps are properly declared"
+      ],
+      "status": "identified",
+      "priority": "medium"
+    },
+    "4_type_definitions": {
+      "description": "TypeScript type definition issues",
+      "affected_files": ["packages/mcp-shared/tsconfig.json"],
+      "issues": [
+        "Cannot find type definition file for 'node'",
+        "Type library specified in compilerOptions but not resolved",
+        "Need to ensure @types/node is properly installed and configured"
+      ],
+      "status": "identified",
+      "priority": "high",
+      "error_log": "error TS2688: Cannot find type definition file for 'node'"
+    },
+    "5_documentation": {
+      "description": "Missing or incomplete documentation in file_structure.json",
+      "affected_files": ["packages/mcp/file_structure.json"],
+      "issues": [
+        "types.ts not documented in file_structure.json",
+        "Need to verify all MCP files are properly documented",
+        "Ensure exports and purposes are accurately described"
+      ],
+      "status": "identified",
+      "priority": "low"
+    },
+    "6_config_validation": {
+      "description": "Configuration validation and loading issues",
+      "affected_files": ["packages/app-executor/src/mcp/MCPProcessManager.ts", "packages/mcp/src/browser/MCPNode.ts"],
+      "issues": [
+        "Inconsistent config validation between browser and executor",
+        "Config cache timestamp not used effectively",
+        "No schema validation for config.json",
+        "Missing validation for security settings"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "7_state_management": {
+      "description": "State management and synchronization issues",
+      "affected_files": ["packages/mcp-shared/src/state/ServerStateMachine.ts", "packages/mcp/src/browser/MCPNode.ts"],
+      "issues": [
+        "State not properly synchronized between browser and executor",
+        "Missing state persistence between sessions",
+        "Incomplete error state recovery logic",
+        "Race conditions in state transitions"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "8_resource_cleanup": {
+      "description": "Resource management and cleanup issues",
+      "affected_files": ["packages/mcp/src/browser/ResourceManager.ts", "packages/mcp/src/browser/MCPNode.ts"],
+      "issues": [
+        "Cleanup not guaranteed on process termination",
+        "Missing cleanup verification in some paths",
+        "Potential memory leaks in resource tracking",
+        "Incomplete dependency cleanup ordering"
+      ],
+      "status": "identified",
+      "priority": "medium"
+    },
+    "9_error_handling": {
+      "description": "Inconsistent error handling patterns",
+      "affected_files": [
+        "packages/mcp-shared/src/errors.ts",
+        "packages/mcp/src/browser/MCPNode.ts",
+        "packages/app-executor/src/mcp/MCPProcessManager.ts"
+      ],
+      "issues": [
+        "Inconsistent error types between packages",
+        "Missing error recovery strategies",
+        "Incomplete error propagation",
+        "No standardized error logging"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "10_circular_dependencies": {
+      "description": "Circular dependencies in project references",
+      "affected_files": ["packages/core/tsconfig.json", "packages/mcp-shared/tsconfig.json"],
+      "issues": [
+        "Circular dependency between core and mcp-shared packages",
+        "Project references form a circular graph",
+        "Build fails due to TypeScript project reference cycle",
+        "Need to restructure package dependencies"
+      ],
+      "status": "identified",
+      "priority": "critical",
+      "error_log": "error TS6202: Project references may not form a circular graph. Cycle detected: .../core/tsconfig.json .../mcp-shared/tsconfig.json"
+    },
+    "11_build_configuration": {
+      "description": "Build and compilation configuration issues",
+      "affected_files": [
+        "packages/mcp/tsconfig.json",
+        "packages/mcp-shared/tsconfig.json",
+        "packages/mcp/package.json"
+      ],
+      "issues": [
+        "Inconsistent module resolution strategies",
+        "Missing or incorrect build output paths",
+        "Incomplete build scripts",
+        "No clear build order defined"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "12_import_consistency": {
+      "description": "Inconsistent import patterns and missing type definitions",
+      "affected_files": [
+        "packages/mcp/src/browser/MCPBrowserClient.ts",
+        "packages/mcp/src/cache/PackageCache.ts",
+        "packages/mcp-shared/src/cache/ToolCache.ts"
+      ],
+      "issues": [
+        "Inconsistent use of event handling imports (EventEmitter vs EventTarget)",
+        "Missing type definitions for event-target-shim",
+        "Circular imports through index.js files",
+        "Inconsistent use of file extensions in imports"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "13_package_structure": {
+      "description": "Package structure and import organization issues",
+      "affected_files": ["packages/mcp/src/**/*.ts", "packages/mcp-shared/src/**/*.ts"],
+      "issues": [
+        "Inconsistent file organization between packages",
+        "Duplicate functionality across packages",
+        "Missing index files for proper module exports",
+        "Inconsistent use of internal vs external modules"
+      ],
+      "status": "identified",
+      "priority": "medium"
+    },
+    "14_incomplete_implementations": {
+      "description": "Empty or incomplete package implementations",
+      "affected_files": ["packages/mcp/src/node", "packages/mcp/src/plugin"],
+      "issues": [
+        "Empty node directory with no implementation",
+        "Empty plugin directory with no implementation",
+        "Missing documentation for planned features",
+        "Unclear implementation status in package.json"
+      ],
+      "status": "identified",
+      "priority": "medium"
+    },
+    "15_index_exports": {
+      "description": "Index file export and import issues",
+      "affected_files": [
+        "packages/mcp-shared/src/index.ts",
+        "packages/mcp/src/index.ts",
+        "packages/mcp-shared/src/types/index.ts"
+      ],
+      "issues": [
+        "Wildcard exports may expose internal implementation details",
+        "Missing explicit type exports",
+        "Circular dependencies through index files",
+        "Inconsistent use of file extensions in imports"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "16_missing_tests": {
+      "description": "Missing or incomplete test coverage",
+      "affected_files": ["packages/mcp/src/**/*.ts", "packages/mcp-shared/src/**/*.ts"],
+      "issues": [
+        "No test files found for most implementations",
+        "Missing test utilities and helpers",
+        "No integration test coverage",
+        "No test documentation"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "17_process_management": {
+      "description": "Process management and lifecycle issues",
+      "affected_files": [
+        "packages/app-executor/src/mcp/MCPProcessManager.ts",
+        "packages/mcp/src/browser/MCPBrowserClient.ts"
+      ],
+      "issues": [
+        "Inconsistent health check intervals",
+        "Missing process cleanup on abnormal termination",
+        "Incomplete error propagation from child processes",
+        "Race conditions in process restart logic"
+      ],
+      "status": "identified",
+      "priority": "critical"
+    },
+    "18_configuration_handling": {
+      "description": "Configuration loading and validation issues",
+      "affected_files": ["packages/app-executor/src/mcp/MCPProcessManager.ts", "packages/mcp/config.json"],
+      "issues": [
+        "Hardcoded cache TTL values",
+        "Missing schema validation for config.json",
+        "Inconsistent config loading between browser and executor",
+        "No validation for environment variables"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "19_security_validation": {
+      "description": "Security validation and enforcement gaps",
+      "affected_files": [
+        "packages/mcp-shared/src/security/SecurityManager.ts",
+        "packages/app-executor/src/mcp/MCPProcessManager.ts"
+      ],
+      "issues": [
+        "Incomplete security checks for file system operations",
+        "Missing validation for network access",
+        "No sandboxing for process execution",
+        "Insufficient permission checks"
+      ],
+      "status": "identified",
+      "priority": "critical"
+    },
+    "20_dependency_centralization": {
+      "description": "MCPError has become a central dependency creating potential bottlenecks",
+      "affected_files": [
+        "packages/mcp-shared/src/errors.ts",
+        "packages/mcp/src/browser/MCPNode.ts",
+        "packages/app-executor/src/mcp/MCPProcessManager.ts"
+      ],
+      "issues": [
+        "MCPError is imported by almost every file creating tight coupling",
+        "Error handling logic is scattered across multiple layers",
+        "No clear separation between domain-specific and general errors",
+        "Risk of circular dependencies through error handling"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "21_dependency_graph_complexity": {
+      "description": "Complex dependency graph revealed by mermaid diagram",
+      "affected_files": [
+        "packages/mcp-shared/src/index.ts",
+        "packages/mcp/src/browser/MCPNode.ts",
+        "packages/app-executor/src/mcp/MCPProcessManager.ts"
+      ],
+      "issues": [
+        "Multiple paths to same dependencies creating maintenance challenges",
+        "No clear layering in the dependency graph",
+        "Direct dependencies on implementation files instead of interfaces",
+        "Missing dependency inversion in key components"
+      ],
+      "status": "identified",
+      "priority": "medium"
+    },
+    "22_rivet_core_coupling": {
+      "description": "Direct coupling to Rivet core types across multiple files",
+      "affected_files": [
+        "packages/mcp-shared/src/schema.ts",
+        "packages/mcp-shared/src/types/data.ts",
+        "packages/mcp/src/browser/MCPNode.ts"
+      ],
+      "issues": [
+        "Direct imports of Rivet core types without abstraction layer",
+        "Missing type adapters for core Rivet types",
+        "Potential version conflicts between core and MCP packages",
+        "No clear boundary between core and MCP type systems"
+      ],
+      "status": "identified",
+      "priority": "high"
+    },
+    "23_event_handling_inconsistency": {
+      "description": "Inconsistent event handling patterns revealed by dependency analysis",
+      "affected_files": [
+        "packages/mcp-shared/src/state/ServerStateMachine.ts",
+        "packages/mcp/src/browser/ResourceManager.ts",
+        "packages/mcp/src/browser/MCPBrowserClient.ts"
+      ],
+      "issues": [
+        "Mix of Node's EventEmitter and browser's EventTarget",
+        "Inconsistent event naming patterns",
+        "Missing event type definitions",
+        "No standardized event propagation model"
+      ],
+      "status": "identified",
+      "priority": "medium"
+    }
+  },
+  "next_steps": {
+    "1": "Refactor error handling to reduce central dependency on MCPError",
+    "2": "Implement dependency inversion for key components",
+    "3": "Create abstraction layer for Rivet core types",
+    "4": "Standardize event handling across packages"
+  }
+}

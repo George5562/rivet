@@ -14,13 +14,23 @@ export enum MCPErrorCode {
   // MCP Protocol specific codes
   ValidationError = -33000,
   SecurityError = -33001,
-  ResourceNotFound = -33002,
+  ResourceLimitExceeded = -33002,
   ResourceAccessDenied = -33003,
-  ToolNotFound = -33004,
-  ToolExecutionError = -33005,
-  SamplingError = -33006,
+  ToolExecutionError = -33004,
+  ToolNotFound = -33005,
+  ToolNotSupported = -33006,
   CapabilityNotSupported = -33007,
   ConnectionError = -33008,
+  ToolDiscoveryError = -33009,
+  ToolMetadataError = -33010,
+  TimeoutError = -33011,
+
+  // Cache errors (-33020 to -33029)
+  CacheError = -33020,
+  CacheInitError = -33021,
+  CacheWriteError = -33022,
+  CacheReadError = -33023,
+  CacheInvalidationError = -33024,
 }
 
 /**
