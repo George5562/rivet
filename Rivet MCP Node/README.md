@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Model Context Protocol (MCP) Node enables interaction with MCP-compliant servers, providing access to external AI capabilities, tools, and resources through a standardized protocol.
+The Model Context Protocol (MCP) Node enables communication with MCP-compliant servers through either HTTP or stdio interfaces. It allows you to send requests to external AI services or tools that implement the MCP protocol.
 
 ## Installation and Setup
 
@@ -28,22 +28,213 @@ yarn install
 yarn build
 ```
 
-This will build all packages in the correct order, including `mcp-shared` before `core`.
+3. Configure MCP servers (for stdio mode):
 
-3. Verify installation:
+Create a configuration file at `~/.config/rivet/mcp-config.json`. For example, using VS Code:
 
-- Check that `dist` directories are created in both `packages/mcp-shared` and `packages/core`
-- Ensure no TypeScript errors are present in the build output
+```bash
+# MacOS/Linux
+mkdir -p ~/.config/rivet
+code ~/.config/rivet/mcp-config.json
+```
 
-### Development
+Add your MCP server configurations:
+
+```json
+{
+  "mcpServers": {
+    "browser-use": {
+      "command": "node",
+      "args": ["/path/to/your/browser-use-server/build/index.js"]
+    },
+    "weather": {
+      "command": "node",
+      "args": ["/path/to/your/weather-server/build/index.js"],
+      "env": {
+        "API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+Each server configuration can include:
+
+- `command`: The command to run the server (required)
+- `args`: Array of command arguments (optional)
+- `env`: Environment variables for the server (optional)
+- `disabled`: Set to true to disable the server (optional)
+- `alwaysAllow`: Array of tools to always allow (optional)
+
+## Using the MCP Node
+
+The MCP Node provides two communication modes:
+
+### 1. HTTP Mode
+
+Uses standard HTTP POST requests to communicate with MCP servers.
+
+#### Configuration:
+
+1. **Endpoint URL**
+
+   - Set the MCP server endpoint URL directly in the node
+   - Or toggle "Use Input" to provide the endpoint via an input port
+
+2. **Headers**
+   - Add custom headers for authentication or other purposes
+   - Headers can be set directly in the node or provided via an input port
+
+### 2. STDIO Mode
+
+Launches and communicates with local MCP servers using standard input/output.
+
+#### Configuration:
+
+1. **Server ID**
+
+   - Set the MCP server ID that matches your configuration file
+   - Or toggle "Use Input" to provide the server ID via an input port
+   - The ID must match a key in your `mcpServers` configuration
+
+2. **Configuration File**
+   - Create `~/.config/rivet/mcp-config.json`
+   - Define server configurations including command, arguments, and environment variables
+   - Each server entry defines how to launch and configure the MCP server
+
+### Tool Discovery
+
+When using stdio mode, the MCP Node will:
+
+1. Automatically discover available tools from the server
+2. Display the number of available tools in the node
+3. Include tool information in the metadata output
+4. Handle tool-specific configurations
+
+### Input/Output
+
+For both modes:
+
+- Input: The data to send to the MCP server
+- Outputs:
+  - Output: The response from the MCP server
+  - Metadata: Additional metadata from the response (including available tools)
+  - Error: Any error messages if the request fails
+
+### Example Usage
+
+1. **HTTP Mode**:
+
+   - Select "HTTP" communication mode
+   - Set endpoint URL (e.g., `http://localhost:8080`)
+   - Add any required headers
+   - Connect your input data
+
+2. **STDIO Mode**:
+   ```json
+   // Example configuration
+   {
+     "mcpServers": {
+       "browser-use": {
+         "command": "node",
+         "args": ["/path/to/browser-use-server/build/index.js"]
+       }
+     }
+   }
+   ```
+   Then in Rivet:
+   - Select "STDIO" communication mode
+   - Set server ID to "browser-use"
+   - Connect your input data
+   - The node will automatically discover available tools
+
+### Node Behavior
+
+The node will:
+
+1. Based on the communication mode:
+   - HTTP: Send a POST request to the configured endpoint
+   - STDIO: Launch and communicate with the configured local server
+2. Send the input data in JSON format
+3. Return the server's response or any error messages
+
+### Error Handling
+
+The node provides detailed error handling for both modes:
+
+- HTTP mode:
+
+  - Network errors
+  - Invalid responses
+  - Server errors
+
+- STDIO mode:
+  - Configuration errors (`CONFIG_NOT_FOUND`)
+  - Server not found (`SERVER_NOT_FOUND`)
+  - Server disabled (`SERVER_DISABLED`)
+  - Launch failures (`SERVER_START_FAILED`)
+  - Communication errors (`SERVER_COMMUNICATION_FAILED`)
+  - Invalid responses (`INVALID_RESPONSE`)
+
+Errors will be output through:
+
+- The error port (error message)
+- The metadata port (detailed error information)
+
+### Troubleshooting
+
+1. Missing dependencies:
+
+```bash
+yarn install
+```
+
+2. Build errors:
+
+```bash
+yarn workspace @ironclad/rivet-core clean
+yarn build
+```
+
+3. HTTP Connection issues:
+
+- Verify the endpoint URL is correct and accessible
+- Check that any required headers are properly configured
+- Ensure the MCP server is running and accepting connections
+
+4. STDIO Connection issues:
+
+- Check that your configuration file exists at `~/.config/rivet/mcp-config.json`
+- Verify the server command and path are correct
+- Check server permissions and environment variables
+- Look for error messages in the node's error output
+- Ensure the server executable exists and is accessible
+
+5. Tool Discovery issues:
+
+- Check that the server responds to the `_get_tools` command
+- Verify the server returns valid JSON
+- Check the server's stderr output for errors
+
+### Under the Hood
+
+When you use an MCP node:
+
+1. The node checks the communication mode
+2. For stdio mode:
+   - Loads the configuration file
+   - Launches the specified server process
+   - Discovers available tools
+   - Maintains the server process for communication
+3. Sends your input to the server
+4. Processes the response
+5. Handles any errors or cleanup needed
+
+## Development
 
 For development, you can use watch mode:
 
 ```bash
-# Watch mode for mcp-shared
-yarn workspace @ironclad/rivet-mcp-shared watch
-
-# Watch mode for core
 yarn workspace @ironclad/rivet-core watch
 ```
 
@@ -71,133 +262,194 @@ yarn install
 
 2. Build errors:
 
-- Clear build artifacts and rebuild:
-
 ```bash
-yarn workspace @ironclad/rivet-mcp-shared clean
 yarn workspace @ironclad/rivet-core clean
 yarn build
 ```
 
-3. Type errors:
+3. HTTP Connection issues:
 
-- The build script ensures packages are built in the correct order
-- Check that package versions match in all `package.json` files
-- Ensure your IDE is properly configured for yarn PnP
+- Verify the endpoint URL is correct and accessible
+- Check that any required headers are properly configured
+- Ensure the MCP server is running and accepting connections
 
-## Architecture
+4. STDIO Connection issues:
 
-The MCP implementation is organized into packages:
+- Check that your configuration file exists and is valid
+- Verify the server command and path are correct
+- Check server permissions and environment variables
+- Look for error messages in the node's error output
 
-- `mcp-shared`: Shared MCP types and utilities
+## Testing with Browser-Based MCP Server
 
-  - Type definitions (`types.ts`)
-  - Tool caching (`cache/ToolCache.ts`)
-  - Security management (`security/SecurityManager.ts`)
-  - Error handling and utilities
+### Available Tools
 
-- `core`: Core Rivet integration
-  - MCP Provider interface (`integrations/MCPProvider.ts`)
-  - Tool execution and management
-  - Integration with Rivet core functionality
+The MCP server provides two browser automation tools:
 
-## Key Components
+1. **open_url**
 
-### Types (`mcp-shared/types.ts`)
+   - Purpose: Opens a URL in Brave browser
+   - Required parameter: `url` (must be a valid URI)
+   - Example input: `{"url": "https://example.com"}`
 
-Core type definitions including:
+2. **get_page_content**
+   - Purpose: Gets content from the currently open page
+   - Optional parameter: `selector` (CSS selector to extract specific content)
+   - Example input: `{"selector": ".main-content"}` or `{}`
 
-- `MCPToolMetadata` - Tool metadata and capabilities
-- `MCPParameter` - Parameter definitions for tools
-- `SecuritySettings` - Security and permissions configuration
-- `ToolRequest` - Tool execution request format
-- `MCPError` and `MCPErrorCode` - Error handling
+### Setting Up a Test Server
 
-### Tool Cache (`mcp-shared/cache/ToolCache.ts`)
+1. Create a new directory for your test server:
 
-Manages caching of discovered tools:
-
-- Single instance pattern
-- Tool metadata caching
-- Server-specific caching
-- Cache invalidation and TTL management
-
-### Security Manager (`mcp-shared/security/SecurityManager.ts`)
-
-Handles security and permissions:
-
-- Server-specific security settings
-- Tool execution permissions
-- Permission validation and enforcement
-
-### MCP Provider (`core/integrations/MCPProvider.ts`)
-
-Interface for MCP integration:
-
-```typescript
-export interface MCPProvider {
-  initialize(config: Record<string, unknown>): Promise<void>;
-  executeTool(request: ToolRequest): Promise<unknown>;
-  getTools(): Promise<MCPToolMetadata[]>;
-  cleanup(): Promise<void>;
-}
+```bash
+mkdir mcp-test-server
+cd mcp-test-server
+npm init -y
 ```
 
-## Error Handling
+2. Install required dependencies:
 
-Standardized error handling through `MCPError`:
-
-```typescript
-export enum MCPErrorCode {
-  ValidationError = 'VALIDATION_ERROR',
-  ConfigError = 'CONFIG_ERROR',
-  InitializationError = 'INITIALIZATION_ERROR',
-  ExecutionError = 'EXECUTION_ERROR',
-  SecurityError = 'SECURITY_ERROR',
-  InternalError = 'INTERNAL_ERROR',
-}
+```bash
+npm install express cors body-parser puppeteer
 ```
 
-## Tool Metadata
+3. Create a basic MCP server (server.js):
 
-Tools are defined with comprehensive metadata:
+```javascript
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const puppeteer = require('puppeteer');
 
-```typescript
-export interface MCPToolMetadata {
-  id: string;
-  name: string;
-  description?: string;
-  version?: string;
-  author?: string;
-  tags?: string[];
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+let browser = null;
+let page = null;
+
+// Initialize browser
+async function initBrowser() {
+  if (!browser) {
+    browser = await puppeteer.launch({
+      headless: false,
+      executablePath: '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+    });
+  }
 }
+
+// Basic MCP endpoint
+app.post('/', async (req, res) => {
+  try {
+    const { input, configuration } = req.body;
+    let response = { output: '', metadata: {} };
+
+    // Determine which tool to use based on input
+    if (input.url) {
+      // open_url tool
+      await initBrowser();
+      if (!page) {
+        page = await browser.newPage();
+      }
+      await page.goto(input.url);
+      response = {
+        output: `Opened URL: ${input.url}`,
+        metadata: {
+          tool: 'open_url',
+          timestamp: new Date().toISOString(),
+          status: 'success',
+        },
+      };
+    } else {
+      // get_page_content tool
+      if (!page) {
+        throw new Error('No page is open. Call open_url first.');
+      }
+
+      let content;
+      if (input.selector) {
+        const element = await page.$(input.selector);
+        content = element ? await element.evaluate((el) => el.textContent) : '';
+      } else {
+        content = await page.content();
+      }
+
+      response = {
+        output: content,
+        metadata: {
+          tool: 'get_page_content',
+          timestamp: new Date().toISOString(),
+          selector: input.selector || 'full page',
+        },
+      };
+    }
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      metadata: {
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+});
+
+// Cleanup on server shutdown
+process.on('SIGINT', async () => {
+  if (browser) {
+    await browser.close();
+  }
+  process.exit();
+});
+
+const PORT = 8080;
+app.listen(PORT, () => {
+  console.log(`Browser MCP test server running on http://localhost:${PORT}`);
+});
 ```
 
-## Security Configuration
+### Example Usage in Rivet
 
-Security settings per server:
+1. **Opening a URL**:
 
-```typescript
-export interface SecuritySettings {
-  permissions: Record<string, boolean>;
-  requireToolPermission: boolean;
-  isToolExecutionPermitted: boolean;
-}
+   - Add an MCP Node
+   - Set input to: `{"url": "https://example.com"}`
+   - Connect to Debug node to see response
+
+2. **Getting Page Content**:
+   - Add another MCP Node
+   - Set input to: `{"selector": "h1"}` or `{}` for full page
+   - Connect to Debug node to see extracted content
+
+### Example Test Graph
+
+1. Create this flow:
+
+```
+[Text Node: URL] → [MCP Node: open_url] → [Debug Node]
+                                       ↓
+[Text Node: Selector] → [MCP Node: get_page_content] → [Debug Node]
 ```
 
-## Server Configuration
+2. Configure nodes:
+   - First Text Node: `{"url": "https://example.com"}`
+   - Second Text Node: `{"selector": "h1"}`
+   - Both MCP Nodes: endpoint `http://localhost:8080`
 
-Server configuration format:
+### Important Notes
 
-```typescript
-export interface MCPServerConfig {
-  id: string;
-  name: string;
-  description?: string;
-  command: string;
-  args?: string[];
-  env?: Record<string, string>;
-}
-```
+- The browser session persists between commands
+- Only one page can be active at a time
+- You must call `open_url` before `get_page_content`
+- The browser will launch automatically on first `open_url`
+- Use Ctrl+C in the terminal to properly shut down the server and browser
 
-For more details, see the JSON schema in `MCP_schema.json` and reference implementation in `MCP_reference.json`.
+### Error Handling
+
+The server will return errors if:
+
+- No URL is provided for `open_url`
+- `get_page_content` is called before any page is opened
+- Invalid URLs are provided
+- Invalid CSS selectors are used
