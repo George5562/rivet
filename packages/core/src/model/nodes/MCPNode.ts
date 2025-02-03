@@ -15,6 +15,7 @@ import {
   type NodeBody,
   type Outputs,
   type InternalProcessContext,
+  type NativeApi,
 } from '../../index.js';
 import { dedent } from 'ts-dedent';
 import { coerceType } from '../../utils/coerceType.js';
@@ -102,9 +103,25 @@ export class MCPError extends Error {
   }
 }
 
-async function loadMCPConfig(): Promise<MCPConfig> {
-  // In browser context, we'll need to get this from the context or a different mechanism
-  throw new MCPError(MCPErrorType.CONFIG_NOT_FOUND, 'MCP config loading is not supported in this environment');
+async function loadMCPConfig(context: RivetUIContext): Promise<MCPConfig> {
+  if (context.executor !== 'nodejs') {
+    throw new MCPError(MCPErrorType.CONFIG_NOT_FOUND, 'MCP config loading is not supported in browser environment');
+  }
+
+  const nativeApi = context.nativeApi;
+  if (!nativeApi) {
+    throw new MCPError(MCPErrorType.CONFIG_NOT_FOUND, 'Native API not available');
+  }
+
+  try {
+    const configContent = await nativeApi.readTextFile('mcp-config.json', 'appConfig');
+    return JSON.parse(configContent);
+  } catch (error) {
+    throw new MCPError(
+      MCPErrorType.CONFIG_NOT_FOUND,
+      `Failed to load MCP config: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
 }
 
 async function communicateWithStdioServer(
@@ -131,10 +148,6 @@ type MCPEditorDataKeys = keyof MCPNodeData;
 
 // Update getEditors implementation
 export class MCPNodeImpl extends NodeImpl<MCPNode> {
-  constructor(chartNode: MCPNode) {
-    super(chartNode);
-  }
-
   static create(): MCPNode {
     const chartNode: MCPNode = {
       type: 'mcp',
@@ -223,7 +236,7 @@ export class MCPNodeImpl extends NodeImpl<MCPNode> {
     ];
   }
 
-  getEditors(_context: RivetUIContext): EditorDefinition<MCPNode>[] {
+  async getEditors(context: RivetUIContext): Promise<EditorDefinition<MCPNode>[]> {
     const editors: EditorDefinition<MCPNode>[] = [
       {
         type: 'dropdown',
@@ -256,19 +269,43 @@ export class MCPNodeImpl extends NodeImpl<MCPNode> {
         },
       );
     } else {
+      // Only try to load server IDs if we're in Node executor and have nativeApi
+      let serverOptions: { label: string; value: string }[] = [];
+
+      if (context.executor === 'nodejs' && context.nativeApi) {
+        try {
+          const config = await loadMCPConfig(context);
+          serverOptions = Object.entries(config.mcpServers)
+            .filter(([_, config]) => !config.disabled)
+            .map(([id, _]) => ({
+              label: id,
+              value: id,
+            }));
+        } catch (error) {
+          console.warn('Failed to load MCP server IDs:', error);
+        }
+      }
+
       editors.push({
-        type: 'string',
+        type: 'dropdown',
         label: 'Server ID',
         dataKey: 'serverId',
         useInputToggleDataKey: 'useEndpointInput',
-        helperMessage: 'The MCP server ID from configuration',
+        helperMessage: serverOptions.length
+          ? 'Select an MCP server from configuration'
+          : context.executor !== 'nodejs'
+            ? 'STDIO mode requires Node Executor'
+            : !context.nativeApi
+              ? 'Native API not available'
+              : 'No MCP servers found in config',
+        options: serverOptions,
       });
     }
 
     return editors;
   }
 
-  getBody(): string | undefined {
+  getBody(context: RivetUIContext): string | undefined {
     const base =
       this.data.communicationMode === 'http'
         ? this.data.useEndpointInput
@@ -278,11 +315,17 @@ export class MCPNodeImpl extends NodeImpl<MCPNode> {
           ? '(Using Input)'
           : this.data.serverId;
 
-    if (this.data.availableTools?.length) {
-      return `${base} (${this.data.availableTools.length} tools)`;
+    const parts = [base];
+
+    if (this.data.communicationMode === 'stdio' && context.executor !== 'nodejs') {
+      parts.push('(Requires Node Executor)');
     }
 
-    return base;
+    if (this.data.availableTools?.length) {
+      parts.push(`(${this.data.availableTools.length} tools)`);
+    }
+
+    return parts.join(' ');
   }
 
   async process(inputs: Inputs, context: InternalProcessContext): Promise<Outputs> {
@@ -330,7 +373,15 @@ export class MCPNodeImpl extends NodeImpl<MCPNode> {
           throw new Error('No server ID provided for stdio communication');
         }
 
-        // Communicate with stdio server
+        // Check if we're in the Node executor
+        if (context.executor !== 'nodejs') {
+          throw new MCPError(
+            MCPErrorType.SERVER_COMMUNICATION_FAILED,
+            'STDIO communication requires the Node executor. Please switch to the Node executor in the top-right menu.',
+          );
+        }
+
+        // Communicate with stdio server through Node executor
         response = await communicateWithStdioServer(serverId, input, this.data.configuration, context.signal);
       }
 

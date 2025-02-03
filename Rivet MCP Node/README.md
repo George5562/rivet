@@ -30,12 +30,26 @@ yarn build
 
 3. Configure MCP servers (for stdio mode):
 
-Create a configuration file at `~/.config/rivet/mcp-config.json`. For example, using VS Code:
+Create a configuration file in your OS-specific location:
+
+- **MacOS**: `~/Library/Application Support/com.ironcladapp.rivet/mcp-config.json`
+- **Linux**: `~/.local/share/com.ironcladapp.rivet/mcp-config.json`
+- **Windows**: `%APPDATA%\Local\com.ironcladapp.rivet\mcp-config.json`
+
+For example, using VS Code on MacOS:
 
 ```bash
-# MacOS/Linux
-mkdir -p ~/.config/rivet
-code ~/.config/rivet/mcp-config.json
+# MacOS
+mkdir -p ~/Library/Application\ Support/com.ironcladapp.rivet
+code ~/Library/Application\ Support/com.ironcladapp.rivet/mcp-config.json
+
+# Linux
+mkdir -p ~/.local/share/com.ironcladapp.rivet
+code ~/.local/share/com.ironcladapp.rivet/mcp-config.json
+
+# Windows (in PowerShell)
+mkdir -Force $env:LOCALAPPDATA\com.ironcladapp.rivet
+code $env:LOCALAPPDATA\com.ironcladapp.rivet\mcp-config.json
 ```
 
 Add your MCP server configurations:
@@ -72,7 +86,7 @@ The MCP Node provides two communication modes:
 
 ### 1. HTTP Mode
 
-Uses standard HTTP POST requests to communicate with MCP servers.
+Uses standard HTTP POST requests to communicate with MCP servers. Works in both browser and Node environments.
 
 #### Configuration:
 
@@ -87,7 +101,9 @@ Uses standard HTTP POST requests to communicate with MCP servers.
 
 ### 2. STDIO Mode
 
-Launches and communicates with local MCP servers using standard input/output.
+Launches and communicates with local MCP servers using standard input/output. **Requires Node Executor**.
+
+> **Important**: STDIO mode requires the Node Executor to be enabled in Rivet. You can switch to the Node Executor using the dropdown in the top-right menu of the Rivet interface.
 
 #### Configuration:
 
@@ -98,13 +114,13 @@ Launches and communicates with local MCP servers using standard input/output.
    - The ID must match a key in your `mcpServers` configuration
 
 2. **Configuration File**
-   - Create `~/.config/rivet/mcp-config.json`
+   - Create the configuration file in your OS-specific location (see Installation section)
    - Define server configurations including command, arguments, and environment variables
    - Each server entry defines how to launch and configure the MCP server
 
 ### Tool Discovery
 
-When using stdio mode, the MCP Node will:
+When using stdio mode (with Node Executor enabled), the MCP Node will:
 
 1. Automatically discover available tools from the server
 2. Display the number of available tools in the node
@@ -123,14 +139,14 @@ For both modes:
 
 ### Example Usage
 
-1. **HTTP Mode**:
+1. **HTTP Mode** (works in both browser and Node environments):
 
    - Select "HTTP" communication mode
    - Set endpoint URL (e.g., `http://localhost:8080`)
    - Add any required headers
    - Connect your input data
 
-2. **STDIO Mode**:
+2. **STDIO Mode** (requires Node Executor):
    ```json
    // Example configuration
    {
@@ -143,6 +159,7 @@ For both modes:
    }
    ```
    Then in Rivet:
+   - Switch to Node Executor in the top-right menu
    - Select "STDIO" communication mode
    - Set server ID to "browser-use"
    - Connect your input data
@@ -154,7 +171,7 @@ The node will:
 
 1. Based on the communication mode:
    - HTTP: Send a POST request to the configured endpoint
-   - STDIO: Launch and communicate with the configured local server
+   - STDIO (Node Executor only): Launch and communicate with the configured local server
 2. Send the input data in JSON format
 3. Return the server's response or any error messages
 
@@ -169,6 +186,7 @@ The node provides detailed error handling for both modes:
   - Server errors
 
 - STDIO mode:
+  - Node Executor not enabled (`SERVER_COMMUNICATION_FAILED`)
   - Configuration errors (`CONFIG_NOT_FOUND`)
   - Server not found (`SERVER_NOT_FOUND`)
   - Server disabled (`SERVER_DISABLED`)
@@ -204,7 +222,8 @@ yarn build
 
 4. STDIO Connection issues:
 
-- Check that your configuration file exists at `~/.config/rivet/mcp-config.json`
+- Ensure Node Executor is enabled in Rivet (top-right menu)
+- Check that your configuration file exists in the correct OS-specific location
 - Verify the server command and path are correct
 - Check server permissions and environment variables
 - Look for error messages in the node's error output
@@ -212,6 +231,7 @@ yarn build
 
 5. Tool Discovery issues:
 
+- Ensure Node Executor is enabled for stdio mode
 - Check that the server responds to the `_get_tools` command
 - Verify the server returns valid JSON
 - Check the server's stderr output for errors
@@ -221,7 +241,7 @@ yarn build
 When you use an MCP node:
 
 1. The node checks the communication mode
-2. For stdio mode:
+2. For stdio mode (requires Node Executor):
    - Loads the configuration file
    - Launches the specified server process
    - Discovers available tools
@@ -275,7 +295,7 @@ yarn build
 
 4. STDIO Connection issues:
 
-- Check that your configuration file exists and is valid
+- Check that your configuration file exists in the correct OS-specific location
 - Verify the server command and path are correct
 - Check server permissions and environment variables
 - Look for error messages in the node's error output

@@ -1,4 +1,11 @@
-import { type ChartNode, type DatasetProvider, type NodeGraph, type Project, type Settings } from '../index.js';
+import {
+  type ChartNode,
+  type DatasetProvider,
+  type NodeGraph,
+  type Project,
+  type Settings,
+  type NativeApi,
+} from '../index.js';
 
 /** Context accessible to UI functions such as getEditors() and getBody(). */
 export type RivetUIContext = {
@@ -22,4 +29,7 @@ export type RivetUIContext = {
 
   /** Gets a string plugin config value from the settings, falling back to a specified environment variable if set. */
   getPluginConfig(name: string): string | undefined;
+
+  /** The native API for file system operations */
+  nativeApi?: NativeApi;
 };
