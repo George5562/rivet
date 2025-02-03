@@ -21,19 +21,6 @@ Have a question? Need some help? Check out the Rivet [Discord server](https://di
 
 https://github.com/Ironclad/rivet/assets/448108/ad1d5e74-fe05-444e-8da7-66a1fc5b6848
 
-- [About Rivet](#about-rivet)
-  - [Rivet Application](#rivet-application)
-  - [Rivet Core](#rivet-core)
-- [Getting Started](#getting-started)
-  - [Prebuilt Binaries](#prebuilt-binaries)
-    - [Latest downloads](#latest-downloads)
-    - [All Releases](#all-releases)
-  - [Running from Source](#running-from-source)
-- [Contributing](#contributing)
-  - [Code of Conduct](#code-of-conduct)
-- [Troubleshooting](#troubleshooting)
-- [Contributors ✨](#contributors-)
-
 ## About Rivet
 
 ### Rivet Application
@@ -57,6 +44,31 @@ Rivet also supports these additional integrations:
 - [Speech-to-Text from AssemblyAI](https://www.assemblyai.com/discover/products/speech-to-text?utm_source=rivet)
 
 For more information on how to use the application and all of its capabilities, see [the documentation](https://rivet.ironcladapp.com/docs)!
+
+### MCP Node Implementation Plan
+
+1. [x] Create MCPNode implementation file with:
+   - Node type and data structure definitions
+   - NodeImpl class implementation
+   - Input/output port definitions
+   - UI metadata
+2. [x] Register node with Rivet's node registry
+3. [x] Add node to registerBuiltInNodes()
+4. [x] Fix Implementation Issues:
+   - [x] Add missing dependencies (nanoid, ts-dedent)
+   - [x] Implement required process() method
+   - [x] Fix headers type definition
+   - [x] Add proper error handling
+5. [x] Fix Type Compatibility Issues:
+   - [x] Update MCPNode type to match NodeRegistration expectations
+   - [x] Ensure MCPNodeData follows correct type structure
+   - [x] Fix node registration type inference
+6. [x] Fix Additional Type Issues:
+   - [x] Convert MCPNodeData to interface
+   - [x] Make all data properties required
+   - [x] Add proper type assertions for editor keys
+   - [x] Remove unnecessary implementation field
+7. [ ] Test node visibility in UI
 
 ### Rivet Core
 

@@ -375,10 +375,7 @@ export class GraphProcessor {
 
   #emitTraceEvent(eventData: string) {
     if (this.#includeTrace) {
-      this.#emitter.emit(
-        'trace',
-        eventData,
-      );
+      this.#emitter.emit('trace', eventData);
     }
   }
 
@@ -498,7 +495,7 @@ export class GraphProcessor {
       return [];
     }
 
-    const connections = this.#connections[nodeId];
+    const connections = this.#connections[node.id];
     if (!connections) {
       return [];
     }
@@ -759,7 +756,6 @@ export class GraphProcessor {
       if (this.#hasPreloadedData) {
         for (const node of this.#graph.nodes) {
           if (this.#nodeResults.has(node.id)) {
-            
             this.#emitTraceEvent(`Node ${node.title} has preloaded data`);
 
             await this.#emitter.emit('nodeStart', {
@@ -909,9 +905,8 @@ export class GraphProcessor {
     this.#processingQueue.addAll(
       inputNodes.map((inputNode) => {
         return async () => {
-
           this.#emitTraceEvent(`Fetching required data for node ${inputNode.title} (${inputNode.id})`);
-          
+
           await this.#fetchNodeDataAndProcessNode(inputNode);
         };
       }),
@@ -971,8 +966,10 @@ export class GraphProcessor {
       return connectionToInput || !input.required;
     });
 
-    if (!inputsReady) {      
-      this.#emitTraceEvent(`Node ${node.title} has required inputs nodes: ${inputNodes.map((n) => n.title).join(', ')}`);
+    if (!inputsReady) {
+      this.#emitTraceEvent(
+        `Node ${node.title} has required inputs nodes: ${inputNodes.map((n) => n.title).join(', ')}`,
+      );
       return;
     }
 
@@ -1181,8 +1178,8 @@ export class GraphProcessor {
 
     if (this.#isNodeOfType('userInput', node)) {
       await this.#processUserInputNode(node, processId);
-    } else if (node.isSplitRun) {
-      await this.#processSplitRunNode(node, processId);
+    } else if (node.isSplitRun === true) {
+      await this.#processSplitRunNode(node as ChartNode & { isSplitRun: true }, processId);
     } else {
       await this.#processNormalNode(node, processId);
     }
@@ -1190,11 +1187,11 @@ export class GraphProcessor {
     return processId;
   }
 
-  #isNodeOfType<T extends BuiltInNodes['type']>(type: T, node: ChartNode): node is Extract<BuiltInNodes, { type: T }> {
+  #isNodeOfType<T extends BuiltInNodeType>(type: T, node: ChartNode): node is Extract<BuiltInNodes, { type: T }> {
     return node.type === type;
   }
 
-  async #processUserInputNode(node: UserInputNode, processId: ProcessId) {
+  async #processUserInputNode(node: Extract<BuiltInNodes, { type: 'userInput' }>, processId: ProcessId) {
     try {
       const inputValues = this.#getInputValuesForNode(node);
       if (this.#excludedDueToControlFlow(node, inputValues, processId)) {
@@ -1240,7 +1237,7 @@ export class GraphProcessor {
     }
   }
 
-  async #processSplitRunNode(node: ChartNode, processId: ProcessId) {
+  async #processSplitRunNode(node: ChartNode & { isSplitRun: true }, processId: ProcessId) {
     const inputValues = this.#getInputValuesForNode(node);
 
     if (this.#excludedDueToControlFlow(node, inputValues, processId)) {
@@ -1613,7 +1610,9 @@ export class GraphProcessor {
     if (inputIsExcludedValue && !allowedToConsumedExcludedValue) {
       if (!isWaitingForLoop) {
         if (inputIsExcludedValue) {
-          this.#emitTraceEvent(`Excluding node ${node.title} because of control flow. Input is has excluded value: ${controlFlowExcludedValues[0]?.[0]}`);
+          this.#emitTraceEvent(
+            `Excluding node ${node.title} because of control flow. Input is has excluded value: ${controlFlowExcludedValues[0]?.[0]}`,
+          );
         }
 
         this.#visitedNodes.add(node.id);
